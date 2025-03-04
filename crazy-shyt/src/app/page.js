@@ -17,6 +17,9 @@ export default function Home() {
       <ContactSection />
       <Translator />
 
+      <MapComponent />
+
+
     </main>
   );
 }
