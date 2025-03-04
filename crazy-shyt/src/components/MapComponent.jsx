@@ -150,7 +150,7 @@ const SearchBar = ({ setPosition }) => {
 };
 
 // Main Map Component
-const GoogleMapsClone = () => {
+const MapComponent = () => {
   const [position, setPosition] = useState([19.0760, 72.8777]); // Default: Mumbai
 
   return (
@@ -180,4 +180,4 @@ const GoogleMapsClone = () => {
   );
 };
 
-export default GoogleMapsClone;
+export default MapComponent;
