@@ -1,36 +1,8 @@
-"use client";
-
-import { getGeminiResponse } from "@/api/gemini/route";
+"use client"
 import React, { useState, useRef, useEffect } from "react";
 import { Play, Pause, Mic, Volume2, Square, X } from "lucide-react";
-
-const initialMessages = [
-  {
-    id: "msg1",
-    sender: "agent",
-    audioUri: "",
-    duration: 15,
-    isPlaying: false,
-    translation:
-      "I have a new property that might interest you. It's a 3-bedroom house in a quiet neighborhood.",
-  },
-  {
-    id: "msg2",
-    sender: "client",
-    audioUri: "",
-    duration: 10,
-    isPlaying: false,
-    translation: "I would like to schedule a viewing for this weekend. Are you available?",
-  },
-  {
-    id: "msg3",
-    sender: "agent",
-    audioUri: "",
-    duration: 20,
-    isPlaying: false,
-    translation: "Great! I can show you the property on Saturday morning. Would 10 AM work for you?",
-  },
-];
+import io from 'socket.io-client';
+import axios from 'axios';
 
 const supportedLanguages = [
   { code: "en-US", name: "English (US)" },
@@ -45,17 +17,88 @@ const supportedLanguages = [
   { code: "ru-RU", name: "Russian" },
 ];
 
-const VoiceMessengerPreview = () => {
-  const [messages, setMessages] = useState(initialMessages);
+const VoiceMessengerWithSockets = () => {
+  const [messages, setMessages] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
-  const [expandedMessages, setExpandedMessages] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState("en-US");
   const [browserSupport, setBrowserSupport] = useState(true);
-  const [loadingTranslation, setLoadingTranslation] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const [username, setUsername] = useState("");
+  const [isConnected, setIsConnected] = useState(false);
+  const [translationLoading, setTranslationLoading] = useState(false);
   const recognitionRef = useRef(null);
 
   const generateUniqueId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  useEffect(() => {
+    // Socket connection setup
+    const newSocket = io('http://localhost:5000', {
+      transports: ['websocket']
+    });
+
+    newSocket.on('connect', () => {
+      setIsConnected(true);
+      console.log('Connected to socket server');
+    });
+
+    newSocket.on('disconnect', () => {
+      setIsConnected(false);
+      console.log('Disconnected from socket server');
+    });
+
+    // Listen for incoming messages and translate them
+    newSocket.on('receive_message', async (message) => {
+      console.log('Received message:', message);
+      
+      // If the message language is different from selected language, request translation
+      if (message.sourceLanguage !== selectedLanguage) {
+        try {
+          // Request translation from server
+          newSocket.emit('translate_message', {
+            originalText: message.originalText,
+            sourceLanguage: message.sourceLanguage,
+            targetLanguage: selectedLanguage
+          });
+        } catch (error) {
+          console.error("Translation request error:", error);
+        }
+      }
+
+      // Add the original message to the chat
+      setMessages(prevMessages => [...prevMessages, message]);
+    });
+
+    // Listen for translated messages from server
+    newSocket.on('translated_message', (translatedMessage) => {
+      setMessages(prevMessages => prevMessages.map(msg => 
+        msg.id === translatedMessage.originalId 
+          ? { ...msg, translation: translatedMessage.translatedText } 
+          : msg
+      ));
+    });
+
+    setSocket(newSocket);
+
+    // Cleanup on component unmount
+    return () => {
+      if (newSocket) {
+        newSocket.disconnect();
+      }
+    };
+  }, [selectedLanguage]);
+
+  // User registration effect
+  useEffect(() => {
+    if (socket && username) {
+      // Register user when username is set
+      socket.emit('register_user', { 
+        username, 
+        language: selectedLanguage 
+      });
+    }
+  }, [socket, username, selectedLanguage]);
+
+  // Speech recognition setup effect
   useEffect(() => {
     if (!("webkitSpeechRecognition" in window)) {
       setBrowserSupport(false);
@@ -69,19 +112,23 @@ const VoiceMessengerPreview = () => {
     recognition.interimResults = false;
     recognition.lang = selectedLanguage;
 
-    recognition.onresult = async (event) => {
+    recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       const newMessage = {
         id: generateUniqueId(),
-        sender: "client",
+        sender: username,
         audioUri: "",
         duration: 0,
         isPlaying: false,
         translation: transcript,
+        originalText: transcript,
+        sourceLanguage: selectedLanguage
       };
 
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-      await translateText(newMessage.id, transcript, selectedLanguage);
+      // Send message directly via socket
+      if (socket) {
+        socket.emit('send_message', newMessage);
+      }
     };
 
     recognition.onerror = (event) => {
@@ -94,44 +141,13 @@ const VoiceMessengerPreview = () => {
         recognition.stop();
       }
     };
-  }, [selectedLanguage]);
-
-  const translateText = async (messageId, text, targetLanguage) => {
-    if (!text.trim()) return;
-
-    setLoadingTranslation(true);
-    const prompt = `Translate the following text into ${targetLanguage}. Ensure that the translation retains the original meaning, fluency, and cultural appropriateness. Do not return anything except the translated phrase—no explanations, notes, or additional text.
-
-Text: "${text}"`;
-
-    try {
-      const response = await getGeminiResponse('AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA', prompt);
-      const translatedText = response.replace(/\s*\(.*?\)\s*/g, "").trim();
-
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === messageId ? { ...msg, translation: translatedText } : msg
-        )
-      );
-    } catch (error) {
-      console.error("Translation Error:", error);
-    } finally {
-      setLoadingTranslation(false);
-    }
-  };
-
-  const togglePlayback = (id) => {
-    setMessages((prevMessages) =>
-      prevMessages.map((msg) => (msg.id === id ? { ...msg, isPlaying: !msg.isPlaying } : { ...msg, isPlaying: false }))
-    );
-  };
-
-  const toggleMessageExpand = (id) => {
-    setExpandedMessages((prev) => (prev.includes(id) ? prev.filter((msgId) => msgId !== id) : [...prev, id]));
-  };
+  }, [socket, username, selectedLanguage]);
 
   const startRecording = () => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current || !username) {
+      alert("Please enter a username first!");
+      return;
+    }
 
     try {
       recognitionRef.current.start();
@@ -163,52 +179,96 @@ Text: "${text}"`;
 
   return (
     <div className="max-w-md mx-auto h-screen bg-gray-100 flex flex-col">
-      <div className="text-center py-4 border-b border-gray-300">
-        <h1 className="text-xl font-bold text-gray-800">Real Estate Voice Messenger</h1>
-      </div>
+      {!username && (
+        <div className="p-4 bg-white">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Enter Username
+          </label>
+          <input 
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            placeholder="Enter your username"
+          />
+        </div>
+      )}
 
-      <div className="p-4 bg-white">
-        <label htmlFor="language-select" className="block text-sm font-medium text-gray-700">
-          Speech Recognition Language
-        </label>
-        <select
-          id="language-select"
-          value={selectedLanguage}
-          onChange={(e) => setSelectedLanguage(e.target.value)}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-          disabled={isRecording}
-        >
-          {supportedLanguages.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex-grow overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex flex-col ${message.sender === "agent" ? "items-end" : "items-start"}`}>
-            <div className={`max-w-[80%] p-3 rounded-lg flex items-center space-x-2 bg-gray-300`}>
-              <span className="text-sm">{message.translation}</span>
-            </div>
+      {username && (
+        <>
+          <div className="text-center py-4 border-b border-gray-300">
+            <h1 className="text-xl font-bold text-gray-800">
+              Real Estate Voice Messenger 
+              {isConnected ? " (Connected)" : " (Disconnected)"}
+            </h1>
           </div>
-        ))}
-      </div>
 
-      <div className="flex justify-center py-4 space-x-4 items-center">
-        {isRecording ? (
-          <button onClick={stopRecording} className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600">
-            <Square className="text-white w-8 h-8" />
-          </button>
-        ) : (
-          <button onClick={startRecording} className="w-16 h-16 rounded-full bg-blue-500 hover:bg-blue-600">
-            <Mic className="text-white w-8 h-8" />
-          </button>
-        )}
-      </div>
+          <div className="p-4 bg-white">
+            <label htmlFor="language-select" className="block text-sm font-medium text-gray-700">
+              Speech Recognition & Translation Language
+            </label>
+            <select
+              id="language-select"
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              disabled={isRecording}
+            >
+              {supportedLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-grow overflow-y-auto p-4 space-y-4">
+            {messages.map((message) => (
+              <div 
+                key={message.id} 
+                className={`flex flex-col ${message.sender === username ? "items-end" : "items-start"}`}
+              >
+                <div 
+                  className={`max-w-[80%] p-3 rounded-lg flex items-center space-x-2 ${
+                    message.sender === username ? "bg-blue-300" : "bg-gray-300"
+                  }`}
+                >
+                  <span className="text-sm">
+                    <strong>{message.sender}: </strong>
+                    {message.translation || message.originalText}
+                  </span>
+                </div>
+                {message.sourceLanguage !== selectedLanguage && (
+                  <span className="text-xs text-gray-500 mt-1">
+                    (Translated from {supportedLanguages.find(lang => lang.code === message.sourceLanguage)?.name})
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-center py-4 space-x-4 items-center">
+            {isRecording ? (
+              <button 
+                onClick={stopRecording} 
+                className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600"
+              >
+                <Square className="text-white w-8 h-8" />
+              </button>
+            ) : (
+              <button 
+                onClick={startRecording} 
+                className="w-16 h-16 rounded-full bg-blue-500 hover:bg-blue-600"
+              >
+                <Mic className="text-white w-8 h-8 m-auto" />
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
-export default VoiceMessengerPreview;
+export default VoiceMessengerWithSockets;
