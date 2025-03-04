@@ -8,7 +8,7 @@ export default function Translator() {
   const [translatedText, setTranslatedText] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const languages = ["Hindi", "French", "Spanish", "German", "Chinese"];
+  const languages = ["Hindi", "French", "Spanish", "German", "Chinese","Marathi","Gujarati"];
 
   const translateText = async () => {
     if (!text.trim()) return;
@@ -22,7 +22,7 @@ export default function Translator() {
 
 
     try {
-        const response = await getGeminiResponse(API_KEY, prompt);
+        const response = await getGeminiResponse("AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA", prompt);
         response.replace(/\s*\(.*?\)\s*/g, "").trim();
         
         console.log(response);
