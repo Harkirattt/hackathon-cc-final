@@ -1,6 +1,8 @@
 "use client"
 import React, { useState, useRef, useEffect } from "react";
-import { Play, Pause, Mic, Volume2, Square, X } from "lucide-react";
+import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast, Toaster } from "sonner";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 import io from 'socket.io-client';
 import axios from 'axios';
@@ -36,6 +38,7 @@ const supportedLanguages = [
   { code: "ja-JP", name: "Japanese" },
   { code: "pt-BR", name: "Portuguese (Brazil)" },
   { code: "ru-RU", name: "Russian" },
+  { code: "gu-IN", name: "Gujarati (India)" },
 ];
 
 const VoiceMessengerWithSockets = () => {
@@ -45,9 +48,16 @@ const VoiceMessengerWithSockets = () => {
   const [browserSupport, setBrowserSupport] = useState(true);
   const [socket, setSocket] = useState(null);
   const [username, setUsername] = useState("");
+  const [currentUsername,setCurrentUsername] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [translationLoading, setTranslationLoading] = useState(false);
   const recognitionRef = useRef(null);
+
+  const [connectionStatus, setConnectionStatus] = useState({
+    socket: false,
+    recognition: false
+  });
+  const [error, setError] = useState(null);
 
   const generateUniqueId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -79,14 +89,26 @@ Original Text: "${originalText}"`
   };
 
   useEffect(() => {
-    // Socket connection setup
     const newSocket = io('http://localhost:5000', {
-      transports: ['websocket']
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      console.log('Connected to socket server');
+      setConnectionStatus(prev => ({ ...prev, socket: true }));
+      toast.success('Connected to Voice Messenger', {
+        description: 'Ready to send and receive messages'
+      });
+    });
+
+    newSocket.on('connect_error', (error) => {
+      setError('Connection failed. Please check your network.');
+      toast.error('Connection Error', {
+        description: 'Unable to connect to the server'
+      });
     });
 
     newSocket.on('disconnect', () => {
@@ -138,6 +160,28 @@ Original Text: "${originalText}"`
       setBrowserSupport(false);
       return;
     }
+
+    const handleUsernameChange = (e) => {
+      const inputUsername = e.target.value;
+      setUsername(inputUsername);
+      
+      // Optional: Clear error if user starts typing
+      if (usernameError) {
+        setUsernameError("");
+      }
+    };
+  
+    const handleUsernameKeyDown = (e) => {
+      // Clear error on key press
+      if (usernameError) {
+        setUsernameError("");
+      }
+  
+      // Submit username on Enter key
+      if (e.key === 'Enter') {
+        handleUsernameSubmit(e);
+      }
+    };
 
     recognitionRef.current = new window.webkitSpeechRecognition();
     const recognition = recognitionRef.current;
@@ -211,9 +255,10 @@ Original Text: "${originalText}"`
     );
   }
 
-  return (
-    <div className="max-w-md mx-auto h-screen bg-gray-100 flex flex-col">
-      {!username && (
+   return (
+    <div className="max-w-lg mx-auto h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col shadow-2xl">
+      <Toaster richColors position="top-right" />
+      {/* {!username && (
         <div className="p-4 bg-white">
           <label htmlFor="username" className="block text-sm font-medium text-gray-700">
             Enter Username
@@ -227,13 +272,13 @@ Original Text: "${originalText}"`
             placeholder="Enter your username"
           />
         </div>
-      )}
+      )} */}
 
       {username && (
         <>
           <div className="text-center py-4 border-b border-gray-300">
             <h1 className="text-xl font-bold text-gray-800">
-              Real Estate Voice Messenger 
+              Real Estate VM
               {isConnected ? " (Connected)" : " (Disconnected)"}
             </h1>
           </div>
@@ -257,7 +302,7 @@ Original Text: "${originalText}"`
             </select>
           </div>
 
-          <div className="flex-grow overflow-y-auto p-4 space-y-4">
+          {/* <div className="flex-grow overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
               <div 
                 key={message.id} 
@@ -301,9 +346,100 @@ Original Text: "${originalText}"`
                 <Mic className="text-white w-8 h-8 m-auto" />
               </button>
             )}
-          </div>
+          </div> */}
         </>
       )}
+<motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center shadow-sm"
+      >
+        <div className="flex items-center space-x-3">
+          <UserCircle2 className="text-indigo-600" />
+          <h1 className="text-xl font-bold text-gray-800">
+            {username || "Voice Messenger"}
+          </h1>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Globe className={`w-5 h-5 ${connectionStatus.socket ? 'text-green-500' : 'text-red-500'}`} />
+          <RefreshCw className={`w-4 h-4 ${connectionStatus.recognition ? 'text-green-500' : 'text-gray-400'}`} />
+        </div>
+      </motion.div>
+
+      {/* Language and Username Setup */}
+      {!username && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-6 flex-grow flex flex-col justify-center"
+        >
+          <input 
+            type="text"
+            value={currentUsername}
+            onKeyDown={(e) => e.key === "Enter" && setUsername(e.target.value)}
+            onChange={(e) => setCurrentUsername(e.target.value)}
+            placeholder="Enter your username"
+            className="w-full px-4 py-3 rounded-xl border-2 border-indigo-200 focus:border-indigo-500 transition-all duration-300 text-center text-lg"
+          />
+        </motion.div>
+      )}
+
+      {/* Messages Area */}
+      <div className="flex-grow overflow-y-auto p-4 space-y-4 bg-white/50 backdrop-blur-sm">
+        <AnimatePresence>
+          {username && messages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className={`flex flex-col ${message.sender === username ? "items-end" : "items-start"}`}
+            >
+              <div 
+                className={`max-w-[80%] p-3 rounded-xl shadow-md flex items-center space-x-2 ${
+                  message.sender === username 
+                    ? "bg-indigo-200 text-indigo-900" 
+                    : "bg-gray-200 text-gray-900"
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 opacity-70" />
+                <span className="text-sm">
+                  <strong>{message.sender}: </strong>
+                  {translationLoading 
+                    ? "Translating..." 
+                    : (message.translation || message.originalText)
+                  }
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Recording Controls */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="p-4 bg-white/80 backdrop-blur-md flex justify-center"
+      >
+        {isRecording ? (
+          <motion.button 
+            whileTap={{ scale: 0.9 }}
+            onClick={stopRecording} 
+            className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-xl transition-all"
+          >
+            <Square className="text-white w-8 h-8" />
+          </motion.button>
+        ) : (
+          <motion.button 
+            whileTap={{ scale: 0.9 }}
+            onClick={startRecording} 
+            className="w-16 h-16 rounded-full bg-indigo-500 hover:bg-indigo-600 flex items-center justify-center shadow-xl transition-all"
+          >
+            <Mic className="text-white w-8 h-8" />
+          </motion.button>
+        )}
+      </motion.div>
     </div>
   );
 };
