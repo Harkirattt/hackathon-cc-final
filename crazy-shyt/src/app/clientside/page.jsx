@@ -12,12 +12,37 @@ export default function RealEstateLandingPage() {
     propertyType: ''
   });
 
-  const [chatMessages, setChatMessages] = useState([
-    { id: 1, text: "Hello! I'm your AI Real Estate Assistant. How can I help you today?", sender: 'bot' }
-  ]);
+  const [chatState, setChatState] = useState({
+    stage: 'greeting',
+    context: {},
+    messages: [
+      { 
+        id: 1, 
+        text: "Hello! I'm your AI Real Estate Assistant. What can I help you with today? I can assist with property searches, market trends, or answer any real estate questions.", 
+        sender: 'bot' 
+      }
+    ]
+  });
 
   const [newMessage, setNewMessage] = useState('');
   const chatContainerRef = useRef(null);
+
+  const propertyTypes = [
+    'Residential', 
+    'Commercial', 
+    'Luxury', 
+    'Investment', 
+    'Waterfront', 
+    'Suburban'
+  ];
+
+  const locations = [
+    'Downtown', 
+    'Suburbs', 
+    'Waterfront', 
+    'City Center', 
+    'Residential District'
+  ];
 
   const popularProperties = [
     {
@@ -71,48 +96,118 @@ export default function RealEstateLandingPage() {
     alert('Thank you for your enquiry! We will get back to you soon.');
   };
 
+  const addChatMessage = (text, sender = 'bot') => {
+    setChatState(prev => ({
+      ...prev,
+      messages: [
+        ...prev.messages, 
+        { 
+          id: prev.messages.length + 1, 
+          text, 
+          sender 
+        }
+      ]
+    }));
+  };
+
   const handleChatSubmit = (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    const userMessage = { 
-      id: chatMessages.length + 1, 
-      text: newMessage, 
-      sender: 'user' 
-    };
-    setChatMessages(prev => [...prev, userMessage]);
+    addChatMessage(newMessage, 'user');
 
-    const botResponse = { 
-      id: chatMessages.length + 2, 
-      text: simulateBotResponse(newMessage), 
-      sender: 'bot' 
-    };
+    const botResponse = generateBotResponse(newMessage);
     
     setNewMessage('');
     setTimeout(() => {
-      setChatMessages(prev => [...prev, botResponse]);
+      addChatMessage(botResponse);
     }, 500);
   };
 
-  const simulateBotResponse = (userMessage) => {
+  const generateBotResponse = (userMessage) => {
     const lowercaseMessage = userMessage.toLowerCase();
-    if (lowercaseMessage.includes('property')) {
-      return "I can help you find the perfect property. What type of property are you interested in?";
+
+    switch (chatState.stage) {
+      case 'greeting':
+        if (lowercaseMessage.includes('property')) {
+          setChatState(prev => ({ ...prev, stage: 'property_type' }));
+          return "Sure! What type of property are you interested in? We have options like Residential, Commercial, Luxury, and Investment properties.";
+        }
+        if (lowercaseMessage.includes('market') || lowercaseMessage.includes('trend')) {
+          setChatState(prev => ({ ...prev, stage: 'market_trends' }));
+          return "I can help you understand our market trends. Would you like to explore trends for Downtown, Suburbs, or Waterfront areas?";
+        }
+        return "I can help you with property searches, market analysis, and real estate inquiries. What would you like to know?";
+
+      case 'property_type':
+        const matchedType = propertyTypes.find(type => 
+          lowercaseMessage.includes(type.toLowerCase())
+        );
+        
+        if (matchedType) {
+          setChatState(prev => ({ 
+            ...prev, 
+            stage: 'property_location',
+            context: { ...prev.context, propertyType: matchedType }
+          }));
+          return `Great! You're interested in ${matchedType} properties. In which location are you looking? We have options in ${locations.join(', ')}.`;
+        }
+        return "Please specify a property type from: Residential, Commercial, Luxury, Investment, etc.";
+
+      case 'property_location':
+        const matchedLocation = locations.find(loc => 
+          lowercaseMessage.includes(loc.toLowerCase())
+        );
+        
+        if (matchedLocation) {
+          const suggestedProperty = popularProperties.find(
+            prop => prop.location.toLowerCase() === matchedLocation.toLowerCase()
+          );
+
+          setChatState(prev => ({ 
+            ...prev, 
+            stage: 'property_details',
+            context: { 
+              ...prev.context, 
+              location: matchedLocation 
+            }
+          }));
+
+          return suggestedProperty 
+            ? `I found a great ${suggestedProperty.title} in ${matchedLocation}. It's priced at ${suggestedProperty.price} and has ${suggestedProperty.bedrooms} bedrooms. Would you like more details?`
+            : `I can help you find properties in ${matchedLocation}. What specific features are you looking for?`;
+        }
+        return "Please specify a location from: Downtown, Suburbs, Waterfront, City Center, etc.";
+
+      case 'market_trends':
+        const matchedTrendLocation = ['downtown', 'suburbs', 'waterfront'].find(loc => 
+          lowercaseMessage.includes(loc)
+        );
+        
+        if (matchedTrendLocation) {
+          const locationData = marketTrendData.map(entry => ({
+            month: entry.name,
+            price: entry[matchedTrendLocation.charAt(0).toUpperCase() + matchedTrendLocation.slice(1)]
+          }));
+
+          const averagePrice = Math.round(
+            locationData.reduce((sum, entry) => sum + entry.price, 0) / locationData.length
+          );
+
+          return `The ${matchedTrendLocation.charAt(0).toUpperCase() + matchedTrendLocation.slice(1)} market shows an average price of $${averagePrice.toLocaleString()}. Prices have been steadily increasing over the past months. Would you like a detailed breakdown?`;
+        }
+        return "I can provide market trends for Downtown, Suburbs, or Waterfront. Which area interests you?";
+
+      default:
+        return "I'm here to help! What would you like to know about real estate?";
     }
-    if (lowercaseMessage.includes('price') || lowercaseMessage.includes('cost')) {
-      return "Our current market trends show varying prices across different locations. Would you like to see our price trends?";
-    }
-    if (lowercaseMessage.includes('location')) {
-      return "We have properties in Downtown, Suburban, and Waterfront areas. Which area are you most interested in?";
-    }
-    return "Interesting! I'm always ready to help you with real estate queries.";
   };
 
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chatMessages]);
+  }, [chatState.messages]);
 
   return (
     <div className="container mx-auto p-4 space-y-8">
@@ -120,7 +215,7 @@ export default function RealEstateLandingPage() {
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
           Your Dream Property Awaits
         </h1>
-        <p className="text-xl text-white-800">
+        <p className="text-xl text-gray-800">
           Discover, Explore, and Find Your Perfect Home
         </p>
       </header>
@@ -214,7 +309,7 @@ export default function RealEstateLandingPage() {
               ref={chatContainerRef}
               className="flex-grow overflow-y-auto mb-4 space-y-2 p-2 border rounded"
             >
-              {chatMessages.map((message) => (
+              {chatState.messages.map((message) => (
                 <div 
                   key={message.id} 
                   className={`p-2 rounded max-w-[80%] ${
