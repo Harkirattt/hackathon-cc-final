@@ -5,6 +5,7 @@ import ProjectFeatures from '@/components/ProjectFeatures';
 import DemoSection from '@/components/DemoSection';
 import TeamSection from '@/components/TeamSection';
 import ContactSection from '@/components/ContactSection';
+import Translator from '@/components/Translator';
 
 export default function Home() {
   return (
@@ -14,6 +15,8 @@ export default function Home() {
       <DemoSection />
       <TeamSection />
       <ContactSection />
+      <Translator />
+
     </main>
   );
 }
