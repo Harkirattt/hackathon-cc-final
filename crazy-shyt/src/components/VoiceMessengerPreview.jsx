@@ -1,8 +1,29 @@
 "use client"
 import React, { useState, useRef, useEffect } from "react";
 import { Play, Pause, Mic, Volume2, Square, X } from "lucide-react";
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 import io from 'socket.io-client';
 import axios from 'axios';
+
+export async function getGeminiResponse(apiKey, prompt) {
+  if (!apiKey) {
+      throw new Error('API key is required');
+  }
+  
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  
+  try {
+      // Make sure prompt is a string
+      const promptString = String(prompt);
+      const result = await model.generateContent(promptString);
+      const response = await result.response;
+      return response.text();
+  } catch (error) {
+      console.error("Error in getGeminiResponse:", error);
+      throw error; // Rethrow to handle in the component
+  }
+}
 
 const supportedLanguages = [
   { code: "en-US", name: "English (US)" },
@@ -30,6 +51,33 @@ const VoiceMessengerWithSockets = () => {
 
   const generateUniqueId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  // Function to translate message using Gemini API
+  const translateMessage = async (originalText, targetLanguage) => {
+    if (!originalText) return originalText;
+
+    setTranslationLoading(true);
+
+    try {
+      const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      const response = await getGeminiResponse('AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA',
+       `Translate the following text into the language corresponding to the code ${targetLanguage}. Ensure that the translation maintains the original meaning, tone, and context. Provide only the translated text without any additional explanation:
+
+Original Text: "${originalText}"`
+
+      );
+      console.log(response);
+
+      // Extract the translated text from the response
+      const translatedText = response
+      setTranslationLoading(false);
+      return translatedText;
+    } catch (error) {
+      console.error("Translation Error:", error);
+      setTranslationLoading(false);
+      return originalText;
+    }
+  };
+
   useEffect(() => {
     // Socket connection setup
     const newSocket = io('http://localhost:5000', {
@@ -50,31 +98,17 @@ const VoiceMessengerWithSockets = () => {
     newSocket.on('receive_message', async (message) => {
       console.log('Received message:', message);
       
-      // If the message language is different from selected language, request translation
-      if (message.sourceLanguage !== selectedLanguage) {
-        try {
-          // Request translation from server
-          newSocket.emit('translate_message', {
-            originalText: message.originalText,
-            sourceLanguage: message.sourceLanguage,
-            targetLanguage: selectedLanguage
-          });
-        } catch (error) {
-          console.error("Translation request error:", error);
-        }
-      }
+      // Translate the message if the target language is different
+      const translatedMessage = message.sourceLanguage !== selectedLanguage 
+        ? await translateMessage(message.originalText, selectedLanguage)
+        : message.originalText;
 
-      // Add the original message to the chat
-      setMessages(prevMessages => [...prevMessages, message]);
-    });
+      const updatedMessage = {
+        ...message,
+        translation: translatedMessage
+      };
 
-    // Listen for translated messages from server
-    newSocket.on('translated_message', (translatedMessage) => {
-      setMessages(prevMessages => prevMessages.map(msg => 
-        msg.id === translatedMessage.originalId 
-          ? { ...msg, translation: translatedMessage.translatedText } 
-          : msg
-      ));
+      setMessages(prevMessages => [...prevMessages, updatedMessage]);
     });
 
     setSocket(newSocket);
@@ -236,7 +270,10 @@ const VoiceMessengerWithSockets = () => {
                 >
                   <span className="text-sm">
                     <strong>{message.sender}: </strong>
-                    {message.translation || message.originalText}
+                    {translationLoading 
+                      ? "Translating..." 
+                      : (message.translation || message.originalText)
+                    }
                   </span>
                 </div>
                 {message.sourceLanguage !== selectedLanguage && (
