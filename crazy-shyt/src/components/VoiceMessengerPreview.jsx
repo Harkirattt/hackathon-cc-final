@@ -142,7 +142,7 @@ const VoiceMessengerWithSockets = () => {
     }
   
     // Improved API key retrieval
-    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA';
+    const API_KEY = 'AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA';
     
     if (!API_KEY) {
       console.error("No Gemini API key found. Please check your environment variables.");
@@ -175,7 +175,7 @@ const VoiceMessengerWithSockets = () => {
   Keywords: [keyword1, keyword2, ...]
   Summary: Precise summary of the conversation`;
   
-      const response = await getGeminiResponse(API_KEY, contextPrompt);
+      const response = await getGeminiResponse('AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA', contextPrompt);
       console.log("Context Extraction Response:", response);
   
       // More robust parsing of the response
