@@ -10,9 +10,6 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 
 export async function getGeminiResponse( prompt) {
-  if (!apiKey) {
-      throw new Error('API key is required');
-  }
   
   const genAI = new GoogleGenerativeAI('AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM');
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
