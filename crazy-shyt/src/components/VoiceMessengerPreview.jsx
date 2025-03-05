@@ -14,7 +14,7 @@ export async function getGeminiResponse(apiKey, prompt) {
       throw new Error('API key is required');
   }
   
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = new GoogleGenerativeAI('AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew');
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   
   try {
@@ -142,7 +142,7 @@ const VoiceMessengerWithSockets = () => {
     }
   
     try {
-      const API_KEY = process.env.GEMINI_API_KEY
+      const API_KEY = 'AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew';
       
       // Combine both originalText and translation
       const messagesText = messages
