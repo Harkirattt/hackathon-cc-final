@@ -46,6 +46,7 @@ const supportedLanguages = [
 const VoiceMessengerWithSockets = () => {
 
   const router = useRouter();
+  const messagesRef = useRef([]);
   const [messages, setMessages] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("en-US");
@@ -56,6 +57,8 @@ const VoiceMessengerWithSockets = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [translationLoading, setTranslationLoading] = useState(false);
   const recognitionRef = useRef(null);
+
+  const messageCount = useMemo(() => messages.length, [messages]);
 
   const [connectionStatus, setConnectionStatus] = useState({
     socket: false,
@@ -340,14 +343,12 @@ Original Text: "${originalText}"`
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      setConnectionStatus(prev => ({ ...prev, socket: true }));
       toast.success('Connected to Voice Messenger', {
         description: 'Ready to send and receive messages'
       });
     });
 
     newSocket.on('connect_error', (error) => {
-      setError('Connection failed. Please check your network.');
       toast.error('Connection Error', {
         description: 'Unable to connect to the server'
       });
@@ -358,50 +359,55 @@ Original Text: "${originalText}"`
       console.log('Disconnected from socket server');
     });
 
-    // Listen for incoming messages and translate them
+    // Improved message receiving logic
     newSocket.on('receive_message', async (message) => {
-      console.log('Received message:', message);
-
+      // Ensure message has all required fields
       const newMessage = {
         id: message.id || `msg_${Date.now()}`,
         sender: message.sender || username,
         originalText: message.originalText || '',
         translation: message.translation || message.originalText || '',
-        sourceLanguage: message.sourceLanguage || selectedLanguage
-      };
-      
-      // Translate the message if the target language is different
-      const translatedMessage = message.sourceLanguage !== selectedLanguage 
-        ? await translateMessage(message.originalText, selectedLanguage)
-        : message.originalText;
-
-      const updatedMessage = {
-        ...message,
-        translation: translatedMessage
+        sourceLanguage: message.sourceLanguage || selectedLanguage,
+        timestamp: Date.now() // Add timestamp to help with tracking
       };
 
+      // Update both state and ref
       setMessages(prevMessages => {
         const updatedMessages = [...prevMessages, newMessage];
-        console.log('Updated Messages:', updatedMessages);
-        
-        // Extract context after adding message
-        extractConversationContext(updatedMessages).then(newContext => {
-          if (newContext) {
-            console.log(updatedMessages)
-            contextRef.current = newContext;
-            setConversationContext(newContext);
-          } else if (contextRef.current) {
-            // Fallback to previous context if new extraction fails
-            setConversationContext(contextRef.current);
-          }
-        });
-        
+        // Keep ref in sync
+        messagesRef.current = updatedMessages;
         return updatedMessages;
       });
-      setTimeout(() => {
-        extractConversationContext(messages);
-      }, 500);
-      console.log(conversationContext)
+
+      // Optional: Translate if needed
+      if (message.sourceLanguage !== selectedLanguage) {
+        try {
+          const translatedText = await translateMessage(
+            message.originalText, 
+            selectedLanguage
+          );
+          
+          // Update the specific message with translation
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.id === newMessage.id 
+                ? {...msg, translation: translatedText} 
+                : msg
+            )
+          );
+        } catch (error) {
+          console.error("Translation error:", error);
+        }
+      }
+
+      // Context extraction
+      extractConversationContext([...messagesRef.current, newMessage])
+        .then(newContext => {
+          if (newContext) {
+            contextRef.current = newContext;
+            setConversationContext(newContext);
+          }
+        });
     });
 
     setSocket(newSocket);
@@ -412,7 +418,7 @@ Original Text: "${originalText}"`
         newSocket.disconnect();
       }
     };
-  }, [selectedLanguage]);
+  }, [selectedLanguage, username]);
 
   // User registration effect
   useEffect(() => {
