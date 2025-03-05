@@ -30,18 +30,6 @@ function cleanReportText(text) {
   return cleanedText.trim();
 }
 
-async function fetchPollutionsImage(prompt) {
-  try {
-    const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`);
-    if (!response.ok) {
-      throw new Error('Image generation failed');
-    }
-    return response.url;
-  } catch (error) {
-    console.error("Error generating image:", error);
-    return null;
-  }
-}
 
 export async function getGeminiResponse( prompt) {
   
@@ -157,11 +145,8 @@ const VoiceMessengerWithSockets = () => {
       for (const currentPrompt of imagePrompts) {
         try {
           const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(currentPrompt)}`, {
-            method: 'GET',
-            headers: {
-              'Accept': 'image/png',
-              'Cache-Control': 'no-cache'
-            }
+            method: 'GET'
+            // Removed problematic headers
           });
           
           if (!response.ok) {
