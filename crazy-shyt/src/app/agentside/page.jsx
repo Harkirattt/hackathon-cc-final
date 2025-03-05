@@ -39,6 +39,8 @@
 We have reviewed your enquiry for ${enquiry.propertyInterest} in ${enquiry.location}. 
 Our agent will contact you shortly.
 
+Link for the call: https://hackathon-cc-final.vercel.app/voice-rec
+
 Best regards,
 Your Real Estate Team`);
 
