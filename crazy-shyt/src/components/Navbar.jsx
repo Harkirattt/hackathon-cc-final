@@ -11,7 +11,7 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="text-2xl font-bold text-indigo-600">
-              ProjectName
+              UltimateBroker.AI
             </Link>
           </div>
           

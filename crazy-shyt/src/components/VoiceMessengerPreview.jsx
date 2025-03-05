@@ -590,7 +590,7 @@ Original Text: "${originalText}"`
         animate={{ opacity: 1, y: 0 }}
         className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center shadow-sm"
       >
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center w-[500px] space-x-3">
           <UserCircle2 className="text-indigo-600" />
           <h1 className="text-xl font-bold text-gray-800">
             {username || "Voice Messenger"}
