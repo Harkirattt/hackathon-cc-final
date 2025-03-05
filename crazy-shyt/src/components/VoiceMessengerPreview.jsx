@@ -7,6 +7,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 import DynamicMap from "./DynamicMap";
 import io from 'socket.io-client';
 import { useRouter } from "next/navigation";
+import generatePdf from "@/utils/generatePdf";
 import axios from 'axios';
 
 export async function getGeminiResponse( prompt) {
@@ -121,11 +122,11 @@ const VoiceMessengerWithSockets = () => {
   const DownloadConversationButton = ({ messages, conversationContext }) => {
     return (
       <button 
-        onClick={() => downloadConversation(messages, conversationContext)}
+        onClick={() => generatePdf(messages, conversationContext)}
         className="flex items-center space-x-2 bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
       >
-        <Download className="w-5 h-5" />
-        <span>Download Conversation</span>
+        <FileText className="w-5 h-5" />
+        <span>Generate PDF Report</span>
       </button>
     );
   };
