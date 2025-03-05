@@ -109,27 +109,27 @@
     { area: "Andheri", houses: 15, avgPrice: "₹3.5 Cr" }
     ];
 
-    API_KEY = process.env.RESEND_API_KEY;
+    // API_KEY = process.env.RESEND_API_KEY;
 
-    const resend = new Resend(API_KEY);
+    // const resend = new Resend(API_KEY);
 
-    const sendEmail = async (to, subject, text) => {
-    try {
-        const { data, error } = await resend.emails.send({
-        from: 'parth.r.lohia@gmail.com',
-        to: [to],
-        subject: subject,
-        html: text
-        });
+    // const sendEmail = async (to, subject, text) => {
+    // try {
+    //     const { data, error } = await resend.emails.send({
+    //     from: 'parth.r.lohia@gmail.com',
+    //     to: [to],
+    //     subject: subject,
+    //     html: text
+    //     });
 
-        if (error) {
-        console.error({ error });
-        }
-        console.log({ data });
-    } catch (error) {
-        console.error('Error sending email', error);
-    }
-    };
+    //     if (error) {
+    //     console.error({ error });
+    //     }
+    //     console.log({ data });
+    // } catch (error) {
+    //     console.error('Error sending email', error);
+    // }
+    // };
     const AgentDashboard = () => {
     const [enquiries, setEnquiries] = useState(generateEnquiries());
     const [selectedEnquiry, setSelectedEnquiry] = useState(null);
@@ -445,7 +445,7 @@
                 </div>
                 <div className="flex justify-end mt-6 space-x-3">
                     <motion.button
-                    onClick={() => {updateEnquiryStatus(selectedEnquiry.id, 'contacted');sendEmail(selectedEnquiry.email, 'Property Enquiry Update', `Hello ${selectedEnquiry.name},\n\nWe are pleased to inform you that your property enquiry has been successfully processed. Click on the link below to get in touch with an agent\n https://hackathon-cc-final.vercel.app/voice-rec `);}}   
+                    onClick={() => {updateEnquiryStatus(selectedEnquiry.id, 'contacted');}}   
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="bg-green-500 text-white px-4 py-2 rounded-md flex items-center"
