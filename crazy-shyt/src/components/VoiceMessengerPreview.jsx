@@ -280,7 +280,7 @@ const generatePDFReport = async (messages, conversationContext) => {
   try {
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
+    const page = pdfDoc.addPage([600, 800]);
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -364,7 +364,7 @@ const generatePDFReport = async (messages, conversationContext) => {
       // Stop if we're near the bottom of the page
       if (yPosition < 100) {
         // Add a new page if needed
-        const newPage = pdfDoc.addPage();
+        const newPage = pdfDoc.addPage([600, 800]);
         yPosition = height - 50;
       }
     });
