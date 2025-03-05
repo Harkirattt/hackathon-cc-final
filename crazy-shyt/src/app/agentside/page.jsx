@@ -42,7 +42,7 @@
     const [isLoading, setIsLoading] = useState(false);
 
     // Add Resend initialization
-    const API_KEY = process.env.NEXT_PUBLIC_RESEND_API_KEY;
+    const API_KEY = "re_NJRyi2Sm_QDE4fc6R72C2TBYfEZRAuWyr";
     const resend = new Resend(API_KEY);
 
     // Email sending function
