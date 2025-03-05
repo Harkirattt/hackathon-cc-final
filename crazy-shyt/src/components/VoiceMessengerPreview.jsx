@@ -4,9 +4,7 @@ import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, Toaster } from "sonner";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-import DynamicMap from "./DynamicMap";
 import io from 'socket.io-client';
-import { useRouter } from "next/navigation";
 import axios from 'axios';
 
 export async function getGeminiResponse(apiKey, prompt) {
@@ -14,7 +12,7 @@ export async function getGeminiResponse(apiKey, prompt) {
       throw new Error('API key is required');
   }
   
-  const genAI = new GoogleGenerativeAI('AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM');
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   
   try {
@@ -44,9 +42,6 @@ const supportedLanguages = [
 ];
 
 const VoiceMessengerWithSockets = () => {
-
-  const router = useRouter();
-  const messagesRef = useRef([]);
   const [messages, setMessages] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("en-US");
@@ -57,8 +52,6 @@ const VoiceMessengerWithSockets = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [translationLoading, setTranslationLoading] = useState(false);
   const recognitionRef = useRef(null);
-
-  const messageCount = useMemo(() => messages.length, [messages]);
 
   const [connectionStatus, setConnectionStatus] = useState({
     socket: false,
@@ -141,15 +134,9 @@ const VoiceMessengerWithSockets = () => {
       return null;
     }
   
-    // Improved API key retrieval
-    const API_KEY = 'AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM';
-    
-    if (!API_KEY) {
-      console.error("No Gemini API key found. Please check your environment variables.");
-      return null;
-    }
-  
     try {
+      const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA';
+      
       // Combine both originalText and translation
       const messagesText = messages
         .map(m => m.originalText || m.translation || '')
@@ -175,7 +162,7 @@ const VoiceMessengerWithSockets = () => {
   Keywords: [keyword1, keyword2, ...]
   Summary: Precise summary of the conversation`;
   
-      const response = await getGeminiResponse('AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM', contextPrompt);
+      const response = await getGeminiResponse(API_KEY, contextPrompt);
       console.log("Context Extraction Response:", response);
   
       // More robust parsing of the response
@@ -199,14 +186,6 @@ const VoiceMessengerWithSockets = () => {
       return newContext;
     } catch (error) {
       console.error("Error extracting conversation context:", error);
-      
-      // Provide more detailed error logging
-      if (error instanceof Error) {
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-      }
-      
       return null;
     }
   }, []);
@@ -219,8 +198,8 @@ const VoiceMessengerWithSockets = () => {
     setTranslationLoading(true);
 
     try {
-      const API_KEY = process.env.GEMINI_API_KEY
-      const response = await getGeminiResponse('AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM',
+      const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      const response = await getGeminiResponse('AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA',
        `Translate the following text into the language corresponding to the code ${targetLanguage}. Ensure that the translation maintains the original meaning, tone, and context. Provide only the translated text without any additional explanation:
 
 Original Text: "${originalText}"`
@@ -246,109 +225,76 @@ Original Text: "${originalText}"`
       conversationContext.keywords.length > 0 || 
       conversationContext.summary
     );
-
-    const locationKeywords = conversationContext?.keywords.filter(keyword => 
-      /(city|address|location|place|area|region)/i.test(keyword)
-    );
-
-    const defaultCenter = [19.0760, 72.8777];
-
-    const handleMoreDetails = () => {
-      router.push('/clientside');
-    };
   
     if (!hasContext) {
       return null;
     }
   
     return (
-      <div className="w-full h-full bg-white shadow-xl flex w-[600px]">
-        {/* Left Side: Conversation Context */}
-        <div className="w-1/2 p-6 overflow-y-auto border-r">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-indigo-800 mb-4 flex items-center">
-              <BookOpen className="mr-3 text-indigo-600" />
-              Conversation Context
-            </h2>
+      <div className="w-80 bg-white shadow-xl p-6 overflow-y-auto h-full border-l">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-indigo-800 mb-4 flex items-center">
+            <BookOpen className="mr-3 text-indigo-600" />
+            Conversation Context
+          </h2>
   
-            {/* Topics Section */}
-            {conversationContext.topics.length > 0 && (
-              <div className="mb-4">
-                <h3 className="font-semibold text-lg text-indigo-700 mb-2">Topics</h3>
-                <div className="flex flex-wrap gap-2">
-                  {conversationContext.topics.map((topic, index) => (
-                    <span 
-                      key={index} 
-                      className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
+          {/* Topics Section */}
+          {conversationContext.topics.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Topics</h3>
+              <div className="flex flex-wrap gap-2">
+                {conversationContext.topics.map((topic, index) => (
+                  <span 
+                    key={index} 
+                    className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm"
+                  >
+                    {topic}
+                  </span>
+                ))}
               </div>
-            )}
+            </div>
+          )}
   
-            {/* Keywords Section */}
-            {conversationContext.keywords.length > 0 && (
-              <div className="mb-4">
-                <h3 className="font-semibold text-lg text-indigo-700 mb-2">Keywords</h3>
-                <div className="flex flex-wrap gap-2">
-                  {conversationContext.keywords.map((keyword, index) => (
-                    <span 
-                      key={index} 
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
-                </div>
+          {/* Keywords Section */}
+          {conversationContext.keywords.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Keywords</h3>
+              <div className="flex flex-wrap gap-2">
+                {conversationContext.keywords.map((keyword, index) => (
+                  <span 
+                    key={index} 
+                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+                  >
+                    {keyword}
+                  </span>
+                ))}
               </div>
-            )}
+            </div>
+          )}
   
-            {/* Summary Section */}
-            {conversationContext.summary && (
-              <div>
-                <h3 className="font-semibold text-lg text-indigo-700 mb-2">Summary</h3>
-                <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
-                  {conversationContext.summary}
-                </p>
-              </div>
-            )}
-          </div>
-  
-          {username && (
-            <div className="flex justify-between items-center">
-              <DownloadConversationButton 
-                messages={messages} 
-                conversationContext={conversationContext} 
-              />
+          {/* Summary Section */}
+          {conversationContext.summary && (
+            <div>
+              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Summary</h3>
+              <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
+                {conversationContext.summary}
+              </p>
             </div>
           )}
         </div>
-  
-        {/* Right Side: Map */}
-        <div className="w-1/2 p-6">
-          {locationKeywords.length > 0 && (
-            <div className="h-full flex flex-col">
-              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Location</h3>
-              <div className="flex-grow rounded-lg overflow-hidden">
-                <DynamicMap center={defaultCenter} />
-              </div>
-              <button
-                onClick={handleMoreDetails}
-                className="mt-2 w-full bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
-              >
-                More Details
-              </button>
-            </div>
-          )}
-        </div>
+                        {username && (
+              <div className="flex justify-between items-center">
+                <DownloadConversationButton 
+                  messages={messages} 
+                  conversationContext={conversationContext} 
+                />
+              </div>)}
       </div>
     );
   };
-    
+
   useEffect(() => {
-    const newSocket = io('https://hackathon-cc-final-production.up.railway.app/', {
+    const newSocket = io('http://localhost:5000', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -357,12 +303,14 @@ Original Text: "${originalText}"`
 
     newSocket.on('connect', () => {
       setIsConnected(true);
+      setConnectionStatus(prev => ({ ...prev, socket: true }));
       toast.success('Connected to Voice Messenger', {
         description: 'Ready to send and receive messages'
       });
     });
 
     newSocket.on('connect_error', (error) => {
+      setError('Connection failed. Please check your network.');
       toast.error('Connection Error', {
         description: 'Unable to connect to the server'
       });
@@ -373,55 +321,49 @@ Original Text: "${originalText}"`
       console.log('Disconnected from socket server');
     });
 
-    // Improved message receiving logic
+    // Listen for incoming messages and translate them
     newSocket.on('receive_message', async (message) => {
-      // Ensure message has all required fields
+      console.log('Received message:', message);
+
       const newMessage = {
         id: message.id || `msg_${Date.now()}`,
         sender: message.sender || username,
         originalText: message.originalText || '',
         translation: message.translation || message.originalText || '',
-        sourceLanguage: message.sourceLanguage || selectedLanguage,
-        timestamp: Date.now() // Add timestamp to help with tracking
+        sourceLanguage: message.sourceLanguage || selectedLanguage
+      };
+      
+      // Translate the message if the target language is different
+      const translatedMessage = message.sourceLanguage !== selectedLanguage 
+        ? await translateMessage(message.originalText, selectedLanguage)
+        : message.originalText;
+
+      const updatedMessage = {
+        ...message,
+        translation: translatedMessage
       };
 
-      // Update both state and ref
       setMessages(prevMessages => {
         const updatedMessages = [...prevMessages, newMessage];
-        // Keep ref in sync
-        messagesRef.current = updatedMessages;
-        return updatedMessages;
-      });
-
-      // Optional: Translate if needed
-      if (message.sourceLanguage !== selectedLanguage) {
-        try {
-          const translatedText = await translateMessage(
-            message.originalText, 
-            selectedLanguage
-          );
-          
-          // Update the specific message with translation
-          setMessages(prevMessages => 
-            prevMessages.map(msg => 
-              msg.id === newMessage.id 
-                ? {...msg, translation: translatedText} 
-                : msg
-            )
-          );
-        } catch (error) {
-          console.error("Translation error:", error);
-        }
-      }
-
-      // Context extraction
-      extractConversationContext([...messagesRef.current, newMessage])
-        .then(newContext => {
+        console.log('Updated Messages:', updatedMessages);
+        
+        // Extract context after adding message
+        extractConversationContext(updatedMessages).then(newContext => {
           if (newContext) {
             contextRef.current = newContext;
             setConversationContext(newContext);
+          } else if (contextRef.current) {
+            // Fallback to previous context if new extraction fails
+            setConversationContext(contextRef.current);
           }
         });
+        
+        return updatedMessages;
+      });
+      setTimeout(() => {
+        extractConversationContext(messages);
+      }, 500);
+      console.log(conversationContext)
     });
 
     setSocket(newSocket);
@@ -432,7 +374,7 @@ Original Text: "${originalText}"`
         newSocket.disconnect();
       }
     };
-  }, [selectedLanguage, username]);
+  }, [selectedLanguage]);
 
   // User registration effect
   useEffect(() => {
@@ -570,7 +512,7 @@ Original Text: "${originalText}"`
 
       {username && (
         <>
-          <div className="text-center py-4 border-b border-gray-300">
+          <div className="text-center py-4 w-[500px] border-b border-gray-300">
             <h1 className="text-xl font-bold text-gray-800">
               Real Estate VM
               {isConnected ? " (Connected)" : " (Disconnected)"}
@@ -649,6 +591,7 @@ Original Text: "${originalText}"`
         className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center shadow-sm"
       >
         <div className="flex items-center space-x-3">
+        <div className="flex items-center w-[500px] space-x-3">
           <UserCircle2 className="text-indigo-600" />
           <h1 className="text-xl font-bold text-gray-800">
             {username || "Voice Messenger"}
@@ -736,7 +679,7 @@ Original Text: "${originalText}"`
       </motion.div>
 
     </div>
-    <div className="w-[900px]">
+    <div>
       {username && <ConversationContextSidebar />}
     </div>
     </div>
