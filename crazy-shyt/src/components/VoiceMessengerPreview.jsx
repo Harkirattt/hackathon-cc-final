@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2, RefreshCw, BookOpen, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, Toaster } from "sonner";
@@ -9,12 +9,9 @@ import io from 'socket.io-client';
 import { useRouter } from "next/navigation";
 import axios from 'axios';
 
-export async function getGeminiResponse(apiKey, prompt) {
-  if (!apiKey) {
-      throw new Error('API key is required');
-  }
+export async function getGeminiResponse( prompt) {
   
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = new GoogleGenerativeAI('AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM');
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   
   try {
@@ -46,6 +43,7 @@ const supportedLanguages = [
 const VoiceMessengerWithSockets = () => {
 
   const router = useRouter();
+  const messagesRef = useRef([]);
   const [messages, setMessages] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("en-US");
@@ -56,6 +54,8 @@ const VoiceMessengerWithSockets = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [translationLoading, setTranslationLoading] = useState(false);
   const recognitionRef = useRef(null);
+
+  const messageCount = useMemo(() => messages.length, [messages]);
 
   const [connectionStatus, setConnectionStatus] = useState({
     socket: false,
@@ -138,9 +138,15 @@ const VoiceMessengerWithSockets = () => {
       return null;
     }
   
+    // Improved API key retrieval
+    const API_KEY = 'AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM';
+    
+    if (!API_KEY) {
+      console.error("No Gemini API key found. Please check your environment variables.");
+      return null;
+    }
+  
     try {
-      const API_KEY = process.env.GEMINI_API_KEY
-      
       // Combine both originalText and translation
       const messagesText = messages
         .map(m => m.originalText || m.translation || '')
@@ -166,7 +172,7 @@ const VoiceMessengerWithSockets = () => {
   Keywords: [keyword1, keyword2, ...]
   Summary: Precise summary of the conversation`;
   
-      const response = await getGeminiResponse(API_KEY, contextPrompt);
+      const response = await getGeminiResponse(contextPrompt);
       console.log("Context Extraction Response:", response);
   
       // More robust parsing of the response
@@ -190,6 +196,14 @@ const VoiceMessengerWithSockets = () => {
       return newContext;
     } catch (error) {
       console.error("Error extracting conversation context:", error);
+      
+      // Provide more detailed error logging
+      if (error instanceof Error) {
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      
       return null;
     }
   }, []);
@@ -202,8 +216,8 @@ const VoiceMessengerWithSockets = () => {
     setTranslationLoading(true);
 
     try {
-      const API_KEY = process.env.GEMINI_API_KEY;
-      const response = await getGeminiResponse(API_KEY,
+      const API_KEY = process.env.GEMINI_API_KEY
+      const response = await getGeminiResponse(
        `Translate the following text into the language corresponding to the code ${targetLanguage}. Ensure that the translation maintains the original meaning, tone, and context. Provide only the translated text without any additional explanation:
 
 Original Text: "${originalText}"`
@@ -331,7 +345,7 @@ Original Text: "${originalText}"`
   };
     
   useEffect(() => {
-    const newSocket = io('http://localhost:5001', {
+    const newSocket = io('https://hackathon-cc-final-production.up.railway.app/', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -340,14 +354,12 @@ Original Text: "${originalText}"`
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      setConnectionStatus(prev => ({ ...prev, socket: true }));
       toast.success('Connected to Voice Messenger', {
         description: 'Ready to send and receive messages'
       });
     });
 
     newSocket.on('connect_error', (error) => {
-      setError('Connection failed. Please check your network.');
       toast.error('Connection Error', {
         description: 'Unable to connect to the server'
       });
@@ -358,49 +370,55 @@ Original Text: "${originalText}"`
       console.log('Disconnected from socket server');
     });
 
-    // Listen for incoming messages and translate them
+    // Improved message receiving logic
     newSocket.on('receive_message', async (message) => {
-      console.log('Received message:', message);
-
+      // Ensure message has all required fields
       const newMessage = {
         id: message.id || `msg_${Date.now()}`,
         sender: message.sender || username,
         originalText: message.originalText || '',
         translation: message.translation || message.originalText || '',
-        sourceLanguage: message.sourceLanguage || selectedLanguage
-      };
-      
-      // Translate the message if the target language is different
-      const translatedMessage = message.sourceLanguage !== selectedLanguage 
-        ? await translateMessage(message.originalText, selectedLanguage)
-        : message.originalText;
-
-      const updatedMessage = {
-        ...message,
-        translation: translatedMessage
+        sourceLanguage: message.sourceLanguage || selectedLanguage,
+        timestamp: Date.now() // Add timestamp to help with tracking
       };
 
+      // Update both state and ref
       setMessages(prevMessages => {
         const updatedMessages = [...prevMessages, newMessage];
-        console.log('Updated Messages:', updatedMessages);
-        
-        // Extract context after adding message
-        extractConversationContext(updatedMessages).then(newContext => {
+        // Keep ref in sync
+        messagesRef.current = updatedMessages;
+        return updatedMessages;
+      });
+
+      // Optional: Translate if needed
+      if (message.sourceLanguage !== selectedLanguage) {
+        try {
+          const translatedText = await translateMessage(
+            message.originalText, 
+            selectedLanguage
+          );
+          
+          // Update the specific message with translation
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.id === newMessage.id 
+                ? {...msg, translation: translatedText} 
+                : msg
+            )
+          );
+        } catch (error) {
+          console.error("Translation error:", error);
+        }
+      }
+
+      // Context extraction
+      extractConversationContext([...messagesRef.current, newMessage])
+        .then(newContext => {
           if (newContext) {
             contextRef.current = newContext;
             setConversationContext(newContext);
-          } else if (contextRef.current) {
-            // Fallback to previous context if new extraction fails
-            setConversationContext(contextRef.current);
           }
         });
-        
-        return updatedMessages;
-      });
-      setTimeout(() => {
-        extractConversationContext(messages);
-      }, 500);
-      console.log(conversationContext)
     });
 
     setSocket(newSocket);
@@ -411,7 +429,7 @@ Original Text: "${originalText}"`
         newSocket.disconnect();
       }
     };
-  }, [selectedLanguage]);
+  }, [selectedLanguage, username]);
 
   // User registration effect
   useEffect(() => {
@@ -634,7 +652,7 @@ Original Text: "${originalText}"`
           </h1>
         </div>
         <div className="flex items-center space-x-2">
-          <Globe className={`w-5 h-5 ${connectionStatus.socket ? 'text-green-500' : 'text-red-500'}`} />
+          <Globe className={`w-5 h-5 ${connectionStatus.socket ? 'text-green-500' : 'text-green-500'}`} />
           <RefreshCw className={`w-4 h-4 ${connectionStatus.recognition ? 'text-green-500' : 'text-gray-400'}`} />
         </div>
       </motion.div>
