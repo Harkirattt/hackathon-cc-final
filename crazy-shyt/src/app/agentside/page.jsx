@@ -109,8 +109,9 @@
     { area: "Andheri", houses: 15, avgPrice: "₹3.5 Cr" }
     ];
 
+    API_KEY = process.env.RESEND_API_KEY;
 
-    const resend = new Resend('re_NJRyi2Sm_QDE4fc6R72C2TBYfEZRAuWyr');
+    const resend = new Resend(API_KEY);
 
     const sendEmail = async (to, subject, text) => {
     try {
