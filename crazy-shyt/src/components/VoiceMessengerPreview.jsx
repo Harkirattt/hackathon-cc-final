@@ -107,134 +107,25 @@ const VoiceMessengerWithSockets = () => {
 
 // New function to generate comprehensive PDF repor
 
-  const downloadConversation = async (messages, conversationContext) => {
-  // Create a new PDF document
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([600, 800]); // Adjust page size as needed
-
-  // Load a standard font
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-  // Set initial y position for text
-  let y = 750;
-
-  // Add conversation title
-  page.drawText('Conversation Report', {
-    x: 50,
-    y,
-    size: 24,
-    font,
-    color: rgb(0, 0, 0),
-  });
-  y -= 30;
-
-  // Add conversation context
-  if (conversationContext) {
-    page.drawText('Conversation Context:', {
-      x: 50,
-      y,
-      size: 18,
-      font,
-      color: rgb(0, 0, 0),
-    });
-    y -= 20;
-
-    if (conversationContext.topics.length > 0) {
-      page.drawText(`Topics: ${conversationContext.topics.join(', ')}`, {
-        x: 50,
-        y,
-        size: 12,
-        font,
-        color: rgb(0, 0, 0),
-      });
-      y -= 15;
-    }
-
-    if (conversationContext.keywords.length > 0) {
-      page.drawText(`Keywords: ${conversationContext.keywords.join(', ')}`, {
-        x: 50,
-        y,
-        size: 12,
-        font,
-        color: rgb(0, 0, 0),
-      });
-      y -= 15;
-    }
-
-    if (conversationContext.summary) {
-      page.drawText(`Summary: ${conversationContext.summary}`, {
-        x: 50,
-        y,
-        size: 12,
-        font,
-        color: rgb(0, 0, 0),
-      });
-      y -= 30;
-    }
-  }
-
-  // Add messages
-  page.drawText('Messages:', {
-    x: 50,
-    y,
-    size: 18,
-    font,
-    color: rgb(0, 0, 0),
-  });
-  y -= 20;
-
-  messages.forEach((message) => {
-    const messageText = `${message.sender}: ${message.translation || message.originalText}`;
-    page.drawText(messageText, {
-      x: 50,
-      y,
-      size: 12,
-      font,
-      color: rgb(0, 0, 0),
-    });
-    y -= 15;
-
-    // Add a small separator between messages
-    page.drawLine({
-      start: { x: 50, y },
-      end: { x: 550, y },
-      thickness: 1,
-      color: rgb(0.8, 0.8, 0.8),
-    });
-    y -= 10;
-  });
-
-  // Add images (example)
-  const imageUrl = 'https://images.unsplash.com/photo-rgJ1J8SDEAY'; // Replace with your image URL
-  const imageBytes = await fetch(imageUrl).then((res) => res.arrayBuffer());
-  const image = await pdfDoc.embedJpg(imageBytes);
-  const { width, height } = image.scale(0.5); // Scale image to fit
-  page.drawImage(image, {
-    x: 50,
-    y: y - height,
-    width,
-    height,
-  });
-  y -= height + 20;
-
-  // Save the PDF
-  const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+const downloadPDFFile = () => {
+  // Assuming the PDF is in the public folder
+  const pdfUrl = '/pdf/conversation_report.pdf';
+  
+  // Create a link element
   const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-
-  link.setAttribute('href', url);
-  link.setAttribute('download', `conversation_report_${new Date().toISOString().replace(/:/g, '-')}.pdf`);
-  link.style.visibility = 'hidden';
+  link.href = pdfUrl;
+  link.download = 'conversation_report.pdf'; // Name the file will be saved as
+  
+  // Append to the document, click, and remove
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
+};
 
-const DownloadConversationButton = ({ messages, conversationContext }) => {
+const DownloadConversationButton = () => {
   return (
     <button 
-      onClick={() => downloadConversation(messages, conversationContext)}
+      onClick={() => downloadPDFFile()}
       className="flex items-center space-x-2 bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
     >
       <FileText className="w-5 h-5" />
@@ -429,8 +320,6 @@ Original Text: "${originalText}"`
           {username && (
             <div className="flex justify-between items-center">
               <DownloadConversationButton 
-                messages={messages} 
-                conversationContext={conversationContext} 
               />
             </div>
           )}
