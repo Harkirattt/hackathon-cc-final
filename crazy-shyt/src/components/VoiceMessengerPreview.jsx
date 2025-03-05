@@ -102,7 +102,7 @@ const VoiceMessengerWithSockets = () => {
 
   async function fetchPollutionsImage(prompt) {
     try {
-      const response = await fetch(`https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=512&height=512&seed=42&model=flux`);
+      const response = await fetch(`https://image.pollinations.ai/prompt/${prompt}`);
       if (!response.ok) {
         throw new Error('Image generation failed');
       }
