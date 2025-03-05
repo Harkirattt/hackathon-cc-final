@@ -1,167 +1,379 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, 
+  MapPin, 
+  Mail, 
+  Phone, 
+  Users, 
+  ChevronRight, 
+  CheckCircle, 
+  XCircle,
+  Filter,
+  Search,
+  RefreshCw
+} from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip 
+} from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix for default marker icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-  iconUrl: require('leaflet/dist/images/marker-icon.png'),
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png')
-});
-
-const AgentDashboard = () => {
-  // Notifications state
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: "New Enquiry: 3 BHK in Mumbai", time: "5 mins ago" },
-    { id: 2, message: "Interested Buyer: Luxury Villa in Bangalore", time: "2 hours ago" },
-    { id: 3, message: "Scheduled Visit: Apartment in Pune", time: "Yesterday" }
-  ]);
-
-  // House locations for heatmap
-  const houseLocations = [
-    { lat: 19.0760, lng: 72.8777, count: 45, city: "Mumbai" },
-    { lat: 12.9716, lng: 77.5946, count: 30, city: "Bangalore" },
-    { lat: 18.5204, lng: 73.8567, count: 35, city: "Pune" },
-    { lat: 26.9124, lng: 75.7873, count: 20, city: "Jaipur" }
-  ];
-
-  // Calendar setup
-  const localizer = momentLocalizer(moment);
-  const [events, setEvents] = useState([
+// Expanded and more dynamic sample data
+const generateEnquiries = () => {
+  return [
     {
-      title: 'Villa Visit - Mumbai',
-      start: new Date(2024, 2, 15, 10, 0),
-      end: new Date(2024, 2, 15, 12, 0),
+      id: 1,
+      name: "Rahul Sharma",
+      location: "Malad West",
+      phone: "+91 9876543210",
+      email: "rahul.sharma@email.com",
+      status: "pending",
+      propertyInterest: "2 BHK Apartment",
+      budget: "₹1.5 - 2.5 Cr",
+      timestamp: new Date(2024, 2, 15, 10, 30)
     },
     {
-      title: 'Apartment Viewing - Bangalore',
-      start: new Date(2024, 2, 20, 14, 0),
-      end: new Date(2024, 2, 20, 16, 0),
+      id: 2,
+      name: "Priya Patel",
+      location: "Juhu",
+      phone: "+91 8765432109",
+      email: "priya.patel@email.com",
+      status: "contacted",
+      propertyInterest: "Sea-facing Penthouse",
+      budget: "₹5 - 8 Cr",
+      timestamp: new Date(2024, 2, 14, 15, 45)
+    },
+    {
+      id: 3,
+      name: "Amit Kumar",
+      location: "Andheri East",
+      phone: "+91 7654321098",
+      email: "amit.kumar@email.com",
+      status: "pending",
+      propertyInterest: "Commercial Space",
+      budget: "₹3 - 5 Cr",
+      timestamp: new Date(2024, 2, 13, 9, 15)
     }
-  ]);
+  ];
+};
 
-  // Function to remove notification
-  const removeNotification = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+const houseLocations = [
+  { 
+    id: 1, 
+    lat: 19.1729, 
+    lng: 72.8478, 
+    name: "Luxurious Malad Apartment", 
+    price: "₹2.5 Cr",
+    type: "Residential",
+    bedrooms: 3,
+    area: 1200
+  },
+  { 
+    id: 2, 
+    lat: 19.0896, 
+    lng: 72.8250, 
+    name: "Beachfront Juhu Penthouse", 
+    price: "₹7.5 Cr",
+    type: "Luxury",
+    bedrooms: 4,
+    area: 2500
+  },
+  { 
+    id: 3, 
+    lat: 19.1171, 
+    lng: 72.8464, 
+    name: "Modern Andheri West Flat", 
+    price: "₹3.2 Cr",
+    type: "Residential",
+    bedrooms: 3,
+    area: 1500
+  }
+];
+
+const housesPerArea = [
+  { area: "Malad", houses: 12, avgPrice: "₹2.5 Cr" },
+  { area: "Juhu", houses: 8, avgPrice: "₹6 Cr" },
+  { area: "Andheri", houses: 15, avgPrice: "₹3.5 Cr" }
+];
+
+const AgentDashboard = () => {
+  const [enquiries, setEnquiries] = useState(generateEnquiries());
+  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [mapFilter, setMapFilter] = useState('all');
+
+  // Filtering and searching functions
+  const filteredEnquiries = enquiries.filter(enquiry => 
+    (filterStatus === 'all' || enquiry.status === filterStatus) &&
+    (searchTerm === '' || 
+      enquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      enquiry.location.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  const filteredHouseLocations = houseLocations.filter(house => 
+    mapFilter === 'all' || house.type.toLowerCase() === mapFilter.toLowerCase()
+  );
+
+  // Refresh enquiries function
+  const refreshEnquiries = () => {
+    setEnquiries(generateEnquiries());
   };
 
   return (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: '250px 1fr 350px', 
-      height: '100vh', 
-      gap: '15px', 
-      padding: '15px',
-      backgroundColor: '#f4f4f4'
-    }}>
-      {/* Notifications Column */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '8px', 
-        padding: '15px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        overflowY: 'auto'
-      }}>
-        <h2 style={{ marginBottom: '15px', color: '#333' }}>Latest Enquiries</h2>
-        {notifications.map(notification => (
-          <div 
-            key={notification.id} 
-            style={{
-              backgroundColor: '#f9f9f9',
-              padding: '10px',
-              marginBottom: '10px',
-              borderRadius: '6px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <div>
-              <p style={{ margin: 0, fontWeight: 'bold', color:'black' }}>{notification.message}</p>
-              <small style={{ color: 'black' }}>{notification.time}</small>
-            </div>
-            <button 
-              onClick={() => removeNotification(notification.id)}
-              style={{
-                backgroundColor: 'red',
-                color: 'white',
-                border: 'none',
-                borderRadius: '2',
-                width: '25px',
-                height: '25px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              X
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Heatmap Column */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '8px', 
-        overflow: 'hidden',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-      }}>
-        <h2 style={{ 
-          padding: '15px', 
-          margin: 0, 
-          backgroundColor: '#f0f0f0',
-          color: '#333'
-        }}>
-          House Availability Heatmap
-        </h2>
-        <MapContainer 
-          center={[20.5937, 78.9629]} 
-          zoom={5} 
-          style={{ height: 'calc(100% - 50px)', width: '100%' }}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Enquiries Section */}
+        <motion.div 
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-white rounded-2xl shadow-lg p-6"
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          {houseLocations.map((location, index) => (
-            <Marker 
-              key={index} 
-              position={[location.lat, location.lng]}
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold flex items-center">
+              <Mail className="mr-2 text-blue-600" /> Enquiries
+            </h2>
+            <div className="flex items-center space-x-2">
+              {/* Status Filter */}
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border rounded-md p-1 text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="contacted">Contacted</option>
+              </select>
+              
+              {/* Search Input */}
+              <div className="relative">
+                <input 
+                  type="text" 
+                  placeholder="Search..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border rounded-md p-1 pl-8 text-sm w-36"
+                />
+                <Search className="absolute left-2 top-2 text-gray-400 w-4 h-4" />
+              </div>
+              
+              {/* Refresh Button */}
+              <motion.button 
+                whileTap={{ rotate: 360 }}
+                onClick={refreshEnquiries}
+                className="p-2 bg-blue-50 rounded-full hover:bg-blue-100"
+              >
+                <RefreshCw className="text-blue-600 w-4 h-4" />
+              </motion.button>
+            </div>
+          </div>
+          
+          <AnimatePresence>
+            {filteredEnquiries.map((enquiry) => (
+              <motion.div 
+                key={enquiry.id}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                whileHover={{ scale: 1.02 }}
+                className={`p-4 rounded-lg border mb-2 cursor-pointer ${
+                  enquiry.status === 'pending' 
+                    ? 'border-yellow-200 bg-yellow-50' 
+                    : 'border-green-200 bg-green-50'
+                }`}
+                onClick={() => setSelectedEnquiry(enquiry)}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-semibold">{enquiry.name}</h3>
+                    <p className="text-sm text-gray-600">
+                      {enquiry.location} | {enquiry.propertyInterest}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {enquiry.timestamp.toLocaleString()}
+                    </p>
+                  </div>
+                  <ChevronRight className="text-gray-400" />
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Houses Analytics Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg p-6"
+        >
+          <h2 className="text-2xl font-bold flex items-center mb-4">
+            <Calendar className="mr-2 text-green-600" /> Area Analytics
+          </h2>
+          
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={housesPerArea}>
+              <XAxis dataKey="area" />
+              <YAxis />
+              <Tooltip 
+                formatter={(value, name, props) => {
+                  if (name === 'houses') return [value, 'Number of Houses'];
+                  return [value, 'Avg Price'];
+                }}
+              />
+              <Bar dataKey="houses" fill="#10b981" />
+            </BarChart>
+          </ResponsiveContainer>
+
+          <div className="mt-4 space-y-2">
+            {housesPerArea.map((area) => (
+              <div 
+                key={area.area} 
+                className="flex justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100 transition"
+              >
+                <span>{area.area}</span>
+                <div>
+                  <span className="font-bold text-green-600 mr-2">{area.houses} Houses</span>
+                  <span className="text-gray-600">Avg: {area.avgPrice}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Map Section */}
+        <motion.div 
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+        >
+          <div className="flex justify-between items-center p-4">
+            <h2 className="text-2xl font-bold flex items-center">
+              <Users className="mr-2 text-purple-600" /> Property Locations
+            </h2>
+            
+            {/* Property Type Filter */}
+            <select 
+              value={mapFilter}
+              onChange={(e) => setMapFilter(e.target.value)}
+              className="border rounded-md p-1 text-sm"
             >
-              <Popup>
-                {location.city}: {location.count} Houses Available
-              </Popup>
-              <Tooltip>{location.city}</Tooltip>
-            </Marker>
-          ))}
-        </MapContainer>
+              <option value="all">All Types</option>
+              <option value="residential">Residential</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </div>
+          
+          <div className="h-[500px]">
+            <MapContainer 
+              center={[19.0760, 72.8777]} 
+              zoom={11} 
+              scrollWheelZoom={false}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; OpenStreetMap contributors'
+              />
+              {filteredHouseLocations.map((house) => (
+                <Marker 
+                  key={house.id} 
+                  position={[house.lat, house.lng]}
+                >
+                  <Popup>
+                    <div>
+                      <h3 className="font-bold">{house.name}</h3>
+                      <p>Price: {house.price}</p>
+                      <p>Type: {house.type}</p>
+                      <p>Bedrooms: {house.bedrooms}</p>
+                      <p>Area: {house.area} sq ft</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        </motion.div>
       </div>
 
-      {/* Calendar Column */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '8px', 
-        padding: '15px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-      }}>
-        <h2 style={{ marginBottom: '15px', color: '#333' }}>House Visit Schedule</h2>
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: 'calc(100% - 50px)' }}
-        />
-      </div>
+      {/* Enquiry Details Modal */}
+      <AnimatePresence>
+        {selectedEnquiry && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setSelectedEnquiry(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.8, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">{selectedEnquiry.name}</h2>
+                <span className={`px-3 py-1 rounded-full text-sm ${
+                  selectedEnquiry.status === 'pending' 
+                    ? 'bg-yellow-100 text-yellow-800' 
+                    : 'bg-green-100 text-green-800'
+                }`}>
+                  {selectedEnquiry.status}
+                </span>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <MapPin className="mr-2 text-blue-600" />
+                  <span>{selectedEnquiry.location}</span>
+                </div>
+                <div className="flex items-center">
+                  <Phone className="mr-2 text-green-600" />
+                  <span>{selectedEnquiry.phone}</span>
+                </div>
+                <div className="flex items-center">
+                  <Mail className="mr-2 text-red-600" />
+                  <span>{selectedEnquiry.email}</span>
+                </div>
+                <div className="flex items-center">
+                  <Filter className="mr-2 text-purple-600" />
+                  <span>Property Interest: {selectedEnquiry.propertyInterest}</span>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="mr-2 text-indigo-600" />
+                  <span>Budget: {selectedEnquiry.budget}</span>
+                </div>
+              </div>
+              <div className="flex justify-end mt-6 space-x-3">
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-green-500 text-white px-4 py-2 rounded-md flex items-center"
+                >
+                  <CheckCircle className="mr-2" /> Accept
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-red-500 text-white px-4 py-2 rounded-md flex items-center"
+                >
+                  <XCircle className="mr-2" /> Reject
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

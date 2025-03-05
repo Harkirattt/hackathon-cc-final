@@ -331,7 +331,7 @@ Original Text: "${originalText}"`
   };
     
   useEffect(() => {
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io('http://localhost:5001', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
