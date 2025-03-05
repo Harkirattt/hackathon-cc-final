@@ -66,13 +66,52 @@ const RealEstateLandingPage = () => {
 
   const handleSubmitEnquiry = (e) => {
     e.preventDefault();
-    alert(`Enquiry Submitted!\nName: ${enquiryName}\nEmail: ${enquiryEmail}\nMessage: ${enquiryMessage}`);
-    
-    // Reset form
-    setEnquiryName("");
-    setEnquiryEmail("");
-    setEnquiryMessage("");
+        console.log('Enquiry Submitted:', enquiryForm);
+    alert('Thank you for your enquiry! We will get back to you soon.');
   };
+
+  const handleChatSubmit = (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    const userMessage = { 
+      id: chatMessages.length + 1, 
+      text: newMessage, 
+      sender: 'user' 
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+
+    const botResponse = { 
+      id: chatMessages.length + 2, 
+      text: simulateBotResponse(newMessage), 
+      sender: 'bot' 
+    };
+    
+    setNewMessage('');
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, botResponse]);
+    }, 500);
+  };
+
+  const simulateBotResponse = (userMessage) => {
+    const lowercaseMessage = userMessage.toLowerCase();
+    if (lowercaseMessage.includes('property')) {
+      return "I can help you find the perfect property. What type of property are you interested in?";
+    }
+    if (lowercaseMessage.includes('price') || lowercaseMessage.includes('cost')) {
+      return "Our current market trends show varying prices across different locations. Would you like to see our price trends?";
+    }
+    if (lowercaseMessage.includes('location')) {
+      return "We have properties in Downtown, Suburban, and Waterfront areas. Which area are you most interested in?";
+    }
+    return "Interesting! I'm always ready to help you with real estate queries.";
+  };
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   return (
     <motion.div 
