@@ -331,7 +331,7 @@ Original Text: "${originalText}"`
   };
     
   useEffect(() => {
-    const newSocket = io('https://hackathon-cc-socket-server.vercel.app/', {
+    const newSocket = io('https://hackathon-cc-socket-server.vercel.app:5001', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
