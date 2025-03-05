@@ -1,281 +1,330 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React, { useState } from 'react';
+import { MapPin, Search, TrendingUp, Home, Mail, ChevronDown } from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function RealEstateLandingPage() {
-  const [enquiryForm, setEnquiryForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
-    propertyType: ''
-  });
+// Sample property data for Mumbai locations
+const popularProperties = [
+  {
+    id: 1,
+    title: "Luxurious Malad Apartment",
+    price: "₹2.7 Crore",
+    location: "Malad West, Mumbai",
+    bedrooms: 3,
+    bathrooms: 2,
+    image: "/images/image1.webp",
+    color: "bg-gradient-to-br from-teal-500 to-green-600"
+  },
+  {
+    id: 2,
+    title: "Beachfront Juhu Penthouse",
+    price: "₹6.8 Crore",
+    location: "Juhu, Mumbai", 
+    bedrooms: 4,
+    bathrooms: 3,
+    image: "/images/image3.png",
+    color: "bg-gradient-to-br from-blue-500 to-indigo-600"
+  },
+  {
+    id: 3,
+    title: "Modern Andheri West Flat",
+    price: "₹3.4 Crore",
+    location: "Andheri West, Mumbai",
+    bedrooms: 3,
+    bathrooms: 2,
+    image: "/images/image4.jpeg",
+    color: "bg-gradient-to-br from-purple-500 to-pink-600"
+  }
+];
 
-  const [chatMessages, setChatMessages] = useState([
-    { id: 1, text: "Hello! I'm your AI Real Estate Assistant. How can I help you today?", sender: 'bot' }
-  ]);
+// Market trends data for Mumbai locations
+const marketTrendsData = [
+  { name: 'Jan', 'Malad': 400, 'Juhu': 500, 'Andheri': 450 },
+  { name: 'Feb', 'Malad': 420, 'Juhu': 550, 'Andheri': 480 },
+  { name: 'Mar', 'Malad': 390, 'Juhu': 600, 'Andheri': 520 },
+  { name: 'Apr', 'Malad': 450, 'Juhu': 580, 'Andheri': 500 },
+  { name: 'May', 'Malad': 480, 'Juhu': 620, 'Andheri': 540 },
+  { name: 'Jun', 'Malad': 500, 'Juhu': 650, 'Andheri': 570 }
+];
 
-  const [newMessage, setNewMessage] = useState('');
-  const chatContainerRef = useRef(null);
-
-  const popularProperties = [
-    {
-      id: 1,
-      title: 'Modern Downtown Loft',
-      price: '$450,000',
-      location: 'Downtown',
-      bedrooms: 2,
-      bathrooms: 2,
-      imageUrl: 'https://picsum.photos/400/300?random=1'
-    },
-    {
-      id: 2,
-      title: 'Suburban Family Home',
-      price: '$650,000',
-      location: 'Oakwood Estates',
-      bedrooms: 4,
-      bathrooms: 3,
-      imageUrl: 'https://picsum.photos/400/300?random=2'
-    },
-    {
-      id: 3,
-      title: 'Luxury Waterfront Condo',
-      price: '$1,200,000',
-      location: 'Riverside',
-      bedrooms: 3,
-      bathrooms: 3,
-      imageUrl: 'https://picsum.photos/400/300?random=3'
-    }
-  ];
-
-  const marketTrendData = [
-    { name: 'Jan', Downtown: 350000, Suburbs: 450000, Waterfront: 750000 },
-    { name: 'Feb', Downtown: 355000, Suburbs: 460000, Waterfront: 770000 },
-    { name: 'Mar', Downtown: 360000, Suburbs: 465000, Waterfront: 790000 },
-    { name: 'Apr', Downtown: 365000, Suburbs: 470000, Waterfront: 810000 },
-    { name: 'May', Downtown: 370000, Suburbs: 475000, Waterfront: 830000 }
-  ];
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEnquiryForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+const RealEstateLandingPage = () => {
+  const [location, setLocation] = useState("");
+  const [enquiryName, setEnquiryName] = useState("");
+  const [enquiryEmail, setEnquiryEmail] = useState("");
+  const [enquiryMessage, setEnquiryMessage] = useState("");
+  const [activeTab, setActiveTab] = useState('overview');
 
   const handleSubmitEnquiry = (e) => {
     e.preventDefault();
-    console.log('Enquiry Submitted:', enquiryForm);
-    alert('Thank you for your enquiry! We will get back to you soon.');
-  };
-
-  const handleChatSubmit = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const userMessage = { 
-      id: chatMessages.length + 1, 
-      text: newMessage, 
-      sender: 'user' 
-    };
-    setChatMessages(prev => [...prev, userMessage]);
-
-    const botResponse = { 
-      id: chatMessages.length + 2, 
-      text: simulateBotResponse(newMessage), 
-      sender: 'bot' 
-    };
+    alert(`Enquiry Submitted!\nName: ${enquiryName}\nEmail: ${enquiryEmail}\nMessage: ${enquiryMessage}`);
     
-    setNewMessage('');
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, botResponse]);
-    }, 500);
+    // Reset form
+    setEnquiryName("");
+    setEnquiryEmail("");
+    setEnquiryMessage("");
   };
-
-  const simulateBotResponse = (userMessage) => {
-    const lowercaseMessage = userMessage.toLowerCase();
-    if (lowercaseMessage.includes('property')) {
-      return "I can help you find the perfect property. What type of property are you interested in?";
-    }
-    if (lowercaseMessage.includes('price') || lowercaseMessage.includes('cost')) {
-      return "Our current market trends show varying prices across different locations. Would you like to see our price trends?";
-    }
-    if (lowercaseMessage.includes('location')) {
-      return "We have properties in Downtown, Suburban, and Waterfront areas. Which area are you most interested in?";
-    }
-    return "Interesting! I'm always ready to help you with real estate queries.";
-  };
-
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
-      <header className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Your Dream Property Awaits
-        </h1>
-        <p className="text-xl text-white-800">
-          Discover, Explore, and Find Your Perfect Home
-        </p>
-      </header>
-
-      <div className="grid md:grid-cols-3 gap-8">
-        {/* Enquiry Form - First Column */}
-        <div className="md:col-span-1">
-          <div className="bg-white shadow-md rounded-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Property Enquiry</h2>
-            <form onSubmit={handleSubmitEnquiry} className="space-y-4">
-              <input
-                name="name"
-                placeholder="Full Name"
-                className="w-full p-2 border rounded text-gray-900 placeholder-gray-600"
-                value={enquiryForm.name}
-                onChange={handleInputChange}
-                required
-              />
-              <input
-                name="email"
-                type="email"
-                placeholder="Email Address"
-                className="w-full p-2 border rounded text-gray-900 placeholder-gray-600"
-                value={enquiryForm.email}
-                onChange={handleInputChange}
-                required
-              />
-              <input
-                name="phone"
-                placeholder="Phone Number"
-                className="w-full p-2 border rounded text-gray-900 placeholder-gray-600"
-                value={enquiryForm.phone}
-                onChange={handleInputChange}
-              />
-              <select
-                name="propertyType"
-                className="w-full p-2 border rounded text-gray-900"
-                value={enquiryForm.propertyType}
-                onChange={handleInputChange}
-              >
-                <option value="">Select Property Type</option>
-                <option value="residential">Residential</option>
-                <option value="commercial">Commercial</option>
-                <option value="investment">Investment</option>
-              </select>
-              <textarea
-                name="message"
-                placeholder="Your Message"
-                className="w-full p-2 border rounded text-gray-900 placeholder-gray-600"
-                rows={4}
-                value={enquiryForm.message}
-                onChange={handleInputChange}
-                required
-              />
-              <button 
-                type="submit" 
-                className="w-full p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-              >
-                Submit Enquiry
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Market Trends - Second Column */}
-        <div className="md:col-span-1">
-          <div className="bg-white shadow-md rounded-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Market Price Trends</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={marketTrendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} />
-                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Price']} />
-                <Legend />
-                <Line type="monotone" dataKey="Downtown" stroke="#8884d8" />
-                <Line type="monotone" dataKey="Suburbs" stroke="#82ca9d" />
-                <Line type="monotone" dataKey="Waterfront" stroke="#ffc658" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* AI Chatbot - Third Column */}
-        <div className="md:col-span-1">
-          <div className="bg-white shadow-md rounded-lg p-6 flex flex-col h-[600px]">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">AI Real Estate Assistant</h2>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
+    >
+      {/* Hero Section */}
+      <motion.header 
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, type: "spring" }}
+        className="relative bg-gradient-to-r from-green-600 via-teal-600 to-blue-600 text-white py-20 px-4 overflow-hidden"
+      >
+        <div className="container mx-auto relative z-10 flex flex-col md:flex-row items-center">
+          <motion.div 
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="md:w-1/2"
+          >
+            <h1 className="text-5xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white to-green-200">
+              Mumbai Real Estate Insights
+            </h1>
+            <p className="text-xl mb-6 text-gray-200">
+              Discover Your Perfect Home in Mumbai
+            </p>
             
-            {/* Chat Messages Container */}
-            <div 
-              ref={chatContainerRef}
-              className="flex-grow overflow-y-auto mb-4 space-y-2 p-2 border rounded"
+            <div className="flex items-center bg-white/20 backdrop-blur-md rounded-full p-2">
+              <MapPin className="text-white mr-2" />
+              <input 
+                type="text" 
+                placeholder="Search Mumbai Locations" 
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="flex-grow bg-transparent text-white placeholder-gray-200 outline-none"
+              />
+              <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="bg-white/30 text-white rounded-full p-2 hover:bg-white/40 transition"
+              >
+                <Search />
+              </motion.button>
+            </div>
+          </motion.div>
+          <motion.div 
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="md:w-1/2 mt-8 md:mt-0"
+          >
+            <motion.img 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              
+            />
+          </motion.div>
+        </div>
+      </motion.header>
+
+      {/* Market Trends Section */}
+      <section className="container mx-auto py-16 px-4">
+        <h2 className="text-3xl font-bold text-center mb-8 flex items-center justify-center">
+          <TrendingUp className="mr-3 text-green-600" /> Mumbai Market Performance
+        </h2>
+        
+        {/* Tabs for Graph View */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-gray-200 rounded-full p-1 flex">
+            {['overview', 'details'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-full transition-colors ${
+                  activeTab === tab 
+                    ? 'bg-green-600 text-white' 
+                    : 'text-gray-600 hover:bg-gray-300'
+                }`}
+              >
+                {tab === 'overview' ? 'Overview' : 'Detailed Analysis'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <AnimatePresence mode='wait'>
+          {activeTab === 'overview' && (
+            <motion.div
+              key="overview"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              {chatMessages.map((message) => (
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={marketTrendsData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="name" stroke="#888888" />
+                  <YAxis stroke="#888888" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #ddd',
+                      borderRadius: '8px'
+                    }} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="Malad" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    activeDot={{ r: 8 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="Juhu" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="Andheri" 
+                    stroke="#8b5cf6" 
+                    strokeWidth={3}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </motion.div>
+          )}
+          {activeTab === 'details' && (
+            <motion.div
+              key="details"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="grid md:grid-cols-3 gap-6"
+            >
+              {['Malad', 'Juhu', 'Andheri'].map((location) => (
                 <div 
-                  key={message.id} 
-                  className={`p-2 rounded max-w-[80%] ${
-                    message.sender === 'bot' 
-                      ? 'bg-blue-200 text-gray-900 self-start' 
-                      : 'bg-green-200 text-gray-900 self-end ml-auto'
-                  }`}
+                  key={location} 
+                  className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-all"
                 >
-                  {message.text}
+                  <h3 className="text-xl font-semibold mb-4">{location}</h3>
+                  <div className="flex justify-around">
+                    <div>
+                      <p className="text-sm text-gray-600">Avg. Price</p>
+                      <p className="text-green-600 font-bold">
+                        {location === 'Malad' ? '₹2.5 Cr' : 
+                         location === 'Juhu' ? '₹7.5 Cr' : 
+                         '₹3.2 Cr'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Growth</p>
+                      <p className="text-green-600 font-bold">
+                        {location === 'Malad' ? '+4.5%' : 
+                         location === 'Juhu' ? '+6.2%' : 
+                         '+5.1%'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ))}
-            </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
 
-            {/* Chat Input */}
-            <form onSubmit={handleChatSubmit} className="flex">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Ask about properties..."
-                className="flex-grow p-2 border rounded-l text-gray-900 placeholder-gray-600"
-              />
-              <button 
-                type="submit" 
-                className="bg-blue-600 text-white p-2 rounded-r hover:bg-blue-700"
-              >
-                Send
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      {/* Popular Properties */}
-      <section>
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-900">
-          Popular Properties
+      {/* Popular Properties Section */}
+      <section className="container mx-auto py-16 px-4">
+        <h2 className="text-3xl font-bold text-center mb-8 flex items-center justify-center">
+          <Home className="mr-3 text-green-600" /> Popular Properties
         </h2>
         <div className="grid md:grid-cols-3 gap-6">
           {popularProperties.map((property) => (
-            <div key={property.id} className="bg-white shadow-md rounded-lg overflow-hidden">
+            <motion.div 
+              key={property.id} 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`rounded-xl shadow-lg overflow-hidden ${property.color} text-white`}
+            >
               <img 
-                src={property.imageUrl} 
+                src={property.image} 
                 alt={property.title} 
                 className="w-full h-48 object-cover"
               />
               <div className="p-4">
-                <h3 className="text-xl font-semibold text-gray-900">{property.title}</h3>
-                <div className="text-gray-800 mt-2">
-                  <p>{property.price}</p>
-                  <p>{property.location}</p>
-                  <p>{property.bedrooms} BD | {property.bathrooms} BA</p>
+                <h3 className="text-xl font-semibold">{property.title}</h3>
+                <p className="opacity-80">{property.location}</p>
+                <div className="flex justify-between mt-4">
+                  <span className="font-bold">{property.price}</span>
+                  <span>{property.bedrooms} BD | {property.bathrooms} BA</span>
                 </div>
-                <button className="w-full mt-4 p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-                  View Details
-                </button>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
-    </div>
+
+      {/* Enquiry Form Section */}
+      <section className="container mx-auto py-16 px-4">
+        <h2 className="text-3xl font-bold text-center mb-8 flex items-center justify-center">
+          <Mail className="mr-3 text-green-600" /> Contact Us
+        </h2>
+        <motion.div 
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-lg mx-auto bg-white p-8 rounded-xl shadow-2xl"
+        >
+          <form onSubmit={handleSubmitEnquiry} className="space-y-4">
+            <input 
+              type="text" 
+              placeholder="Your Name" 
+              value={enquiryName}
+              onChange={(e) => setEnquiryName(e.target.value)}
+              required
+              className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <input 
+              type="email" 
+              placeholder="Your Email" 
+              value={enquiryEmail}
+              onChange={(e) => setEnquiryEmail(e.target.value)}
+              required
+              className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <textarea 
+              placeholder="Your Message" 
+              value={enquiryMessage}
+              onChange={(e) => setEnquiryMessage(e.target.value)}
+              required
+              rows={4}
+              className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="submit" 
+              className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white p-3 rounded-md hover:from-green-700 hover:to-teal-700 transition"
+            >
+              Send Enquiry
+            </motion.button>
+          </form>
+        </motion.div>
+      </section>
+    </motion.div>
   );
-}
+};
+
+export default RealEstateLandingPage;
