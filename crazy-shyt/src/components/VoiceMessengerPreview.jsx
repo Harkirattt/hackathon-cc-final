@@ -206,7 +206,7 @@ const VoiceMessengerWithSockets = () => {
 
     try {
       const API_KEY = process.env.GEMINI_API_KEY
-      const response = await getGeminiResponse(API_KEY,
+      const response = await getGeminiResponse('AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew',
        `Translate the following text into the language corresponding to the code ${targetLanguage}. Ensure that the translation maintains the original meaning, tone, and context. Provide only the translated text without any additional explanation:
 
 Original Text: "${originalText}"`
