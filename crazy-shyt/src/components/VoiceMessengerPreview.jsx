@@ -114,17 +114,56 @@ const VoiceMessengerWithSockets = () => {
   //   console.log('Download Completed');
   // }
 
-  async function fetchPollutionsImage(prompt) {
-    try {
-      const response = await fetch(`https://image.pollinations.ai/prompt/${prompt}`);
-      if (!response.ok) {
-        throw new Error('Image generation failed');
+  async function fetchPollutionsImage(prompt, retries = 2) {
+    const imagePrompts = [
+      prompt,
+      `Professional illustration of ${prompt}`,
+      `Clean, minimalist graphic representing ${prompt}`,
+      'Business communication landscape'
+    ];
+  
+    for (const currentPrompt of imagePrompts) {
+      try {
+        const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(currentPrompt)}`);
+        
+        if (!response.ok) {
+          throw new Error('Image generation failed');
+        }
+  
+        // Verify image type
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.startsWith('image/png')) {
+          throw new Error('Not a PNG image');
+        }
+  
+        const imageBlob = await response.blob();
+        
+        // Additional PNG validation
+        const arrayBuffer = await imageBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // PNG file signature check
+        const isPNG = uint8Array[0] === 0x89 && 
+                      uint8Array[1] === 0x50 && 
+                      uint8Array[2] === 0x4E && 
+                      uint8Array[3] === 0x47;
+        
+        if (!isPNG) {
+          throw new Error('Invalid PNG signature');
+        }
+  
+        return URL.createObjectURL(imageBlob);
+      } catch (error) {
+        console.warn(`Image fetch failed for prompt "${currentPrompt}":`, error);
+        
+        // If it's the last retry, return null
+        if (imagePrompts.indexOf(currentPrompt) === imagePrompts.length - 1) {
+          return null;
+        }
       }
-      return response.url;
-    } catch (error) {
-      console.error("Error generating image:", error);
-      return null;
     }
+  
+    return null;
   }
   
   // Existing getGeminiResponse function from the original code
@@ -238,7 +277,7 @@ const generatePDFReport = async (messages, conversationContext) => {
 
     const reportText = await getGeminiResponse(reportPrompt);
 
-    // Generate images for the report
+    // Generate images for the report with enhanced error handling
     const mainImageUrl = await fetchPollutionsImage(
       conversationContext.topics[0] || 'professional business meeting'
     );
@@ -307,26 +346,38 @@ const generatePDFReport = async (messages, conversationContext) => {
       }
     });
 
-    // Add images if available
-    if (mainImageUrl) {
-      const mainImageBytes = await fetch(mainImageUrl).then(res => res.arrayBuffer());
-      const mainImage = await pdfDoc.embedPng(mainImageBytes);
-      page.drawImage(mainImage, {
-        x: 50,
-        y: 50,
-        width: 200,
-        height: 150
-      });
-    }
+    // Add images if available with robust error handling
+    try {
+      if (mainImageUrl) {
+        const mainImageBytes = await fetch(mainImageUrl).then(res => res.arrayBuffer());
+        const mainImage = await pdfDoc.embedPng(mainImageBytes);
+        page.drawImage(mainImage, {
+          x: 50,
+          y: 50,
+          width: 200,
+          height: 150
+        });
+      }
 
-    if (summaryImageUrl) {
-      const summaryImageBytes = await fetch(summaryImageUrl).then(res => res.arrayBuffer());
-      const summaryImage = await pdfDoc.embedPng(summaryImageBytes);
-      page.drawImage(summaryImage, {
-        x: width - 250,
-        y: 50,
-        width: 200,
-        height: 150
+      if (summaryImageUrl) {
+        const summaryImageBytes = await fetch(summaryImageUrl).then(res => res.arrayBuffer());
+        const summaryImage = await pdfDoc.embedPng(summaryImageBytes);
+        page.drawImage(summaryImage, {
+          x: width - 250,
+          y: 50,
+          width: 200,
+          height: 150
+        });
+      }
+    } catch (imageError) {
+      console.warn('Image embedding failed:', imageError);
+      // Optionally, you could draw a placeholder or skip image embedding
+      page.drawText('Image could not be embedded', {
+        x: 50,
+        y: 100,
+        size: 10,
+        font: font,
+        color: rgb(0.5, 0.5, 0.5)
       });
     }
 
@@ -355,6 +406,7 @@ const generatePDFReport = async (messages, conversationContext) => {
     });
   }
 };
+
   
 
 
