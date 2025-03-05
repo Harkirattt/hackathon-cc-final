@@ -205,7 +205,7 @@ const VoiceMessengerWithSockets = () => {
   });
 
   // Add images (example)
-  const imageUrl = 'https://example.com/sample-image.jpg'; // Replace with your image URL
+  const imageUrl = 'https://unsplash.com/photos/white-and-red-wooden-house-miniature-on-brown-table-rgJ1J8SDEAY'; // Replace with your image URL
   const imageBytes = await fetch(imageUrl).then((res) => res.arrayBuffer());
   const image = await pdfDoc.embedJpg(imageBytes);
   const { width, height } = image.scale(0.5); // Scale image to fit
