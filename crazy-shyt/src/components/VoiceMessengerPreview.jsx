@@ -114,31 +114,18 @@ const VoiceMessengerWithSockets = () => {
   //   console.log('Download Completed');
   // }
 
-  async function fetchPollutionsImage(prompt, retries = 2) {
+  async function fetchPollutionsImage(prompt, retries = 3) {
     const imagePrompts = [
       prompt,
       `Professional illustration of ${prompt}`,
       `Clean, minimalist graphic representing ${prompt}`,
-      'Business communication landscape'
+      'Business communication landscape',
+      `Photorealistic image of ${prompt}`,
+      `Detailed vector illustration of ${prompt}`
     ];
   
-    for (const currentPrompt of imagePrompts) {
+    const validateImage = async (imageBlob) => {
       try {
-        const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(currentPrompt)}`);
-        
-        if (!response.ok) {
-          throw new Error('Image generation failed');
-        }
-  
-        // Verify image type
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.startsWith('image/png')) {
-          throw new Error('Not a PNG image');
-        }
-  
-        const imageBlob = await response.blob();
-        
-        // Additional PNG validation
         const arrayBuffer = await imageBlob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         
@@ -148,21 +135,51 @@ const VoiceMessengerWithSockets = () => {
                       uint8Array[2] === 0x4E && 
                       uint8Array[3] === 0x47;
         
-        if (!isPNG) {
-          throw new Error('Invalid PNG signature');
-        }
-  
-        return URL.createObjectURL(imageBlob);
-      } catch (error) {
-        console.warn(`Image fetch failed for prompt "${currentPrompt}":`, error);
+        // Additional checks for image validity
+        const isValidImage = isPNG && 
+                             uint8Array.length > 100 && // Minimum file size
+                             imageBlob.type.startsWith('image/png');
         
-        // If it's the last retry, return null
-        if (imagePrompts.indexOf(currentPrompt) === imagePrompts.length - 1) {
-          return null;
+        return isValidImage;
+      } catch (error) {
+        console.error("Image validation error:", error);
+        return false;
+      }
+    };
+  
+    for (let attempt = 0; attempt < retries; attempt++) {
+      for (const currentPrompt of imagePrompts) {
+        try {
+          const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(currentPrompt)}`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'image/png',
+              'Cache-Control': 'no-cache'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+  
+          const imageBlob = await response.blob();
+          
+          // Validate the image
+          const isValidImage = await validateImage(imageBlob);
+          
+          if (isValidImage) {
+            return URL.createObjectURL(imageBlob);
+          }
+        } catch (error) {
+          console.warn(`Image fetch failed for prompt "${currentPrompt}" (Attempt ${attempt + 1}):`, error);
         }
       }
+  
+      // Add a small delay between retry attempts
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   
+    console.error("Failed to generate valid image after all attempts");
     return null;
   }
   
