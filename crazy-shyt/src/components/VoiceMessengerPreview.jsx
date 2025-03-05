@@ -10,6 +10,20 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
+function cleanReportText(text) {
+  // Remove hash symbols at the start of lines
+  let cleanedText = text.replace(/^#+\s*/gm, '');
+  
+  // Replace text between asterisks with a newline and the text
+  cleanedText = cleanedText.replace(/\*([^*]+)\*/g, '\n$1\n');
+  
+  // Remove multiple consecutive newlines
+  cleanedText = cleanedText.replace(/\n{3,}/g, '\n\n');
+  
+  // Trim leading and trailing whitespace
+  return cleanedText.trim();
+}
+
 async function fetchPollutionsImage(prompt) {
   try {
     const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`);
@@ -131,10 +145,10 @@ const VoiceMessengerWithSockets = () => {
   
   // Improved text wrapping function
   function wrapText(text, font, fontSize, maxWidth) {
-    // Remove newline characters and extra whitespace
-    const cleanedText = text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    // Clean the text first
+    const cleanedText = cleanReportText(text);
     
-    const words = cleanedText.split(' ');
+    const words = cleanedText.split(/\s+/);
     const lines = [];
     let currentLine = '';
   
@@ -162,6 +176,7 @@ const VoiceMessengerWithSockets = () => {
   
     return lines;
   }
+  
   
   // New function to generate comprehensive PDF report
   // Improved text wrapping function
