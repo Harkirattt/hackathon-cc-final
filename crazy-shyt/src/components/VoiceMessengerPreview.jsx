@@ -652,7 +652,7 @@ Original Text: "${originalText}"`
           </h1>
         </div>
         <div className="flex items-center space-x-2">
-          <Globe className={`w-5 h-5 ${connectionStatus.socket ? 'text-green-500' : 'text-red-500'}`} />
+          <Globe className={`w-5 h-5 ${connectionStatus.socket ? 'text-green-500' : 'text-green-500'}`} />
           <RefreshCw className={`w-4 h-4 ${connectionStatus.recognition ? 'text-green-500' : 'text-gray-400'}`} />
         </div>
       </motion.div>
