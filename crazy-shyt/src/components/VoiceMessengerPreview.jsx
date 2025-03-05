@@ -14,11 +14,17 @@ function cleanReportText(text) {
   // Remove hash symbols at the start of lines
   let cleanedText = text.replace(/^#+\s*/gm, '');
   
-  // Replace text between asterisks with a newline and the text
-  cleanedText = cleanedText.replace(/\*([^*]+)\*/g, '\n$1\n');
+  // Remove asterisks while preserving the text inside them
+  cleanedText = cleanedText.replace(/\*([^*]+)\*/g, '$1');
   
   // Remove multiple consecutive newlines
   cleanedText = cleanedText.replace(/\n{3,}/g, '\n\n');
+  
+  // Normalize line breaks
+  cleanedText = cleanedText.replace(/\r\n/g, '\n');
+  
+  // Add proper paragraph spacing
+  cleanedText = cleanedText.split('\n').map(line => line.trim()).filter(line => line).join('\n\n');
   
   // Trim leading and trailing whitespace
   return cleanedText.trim();
