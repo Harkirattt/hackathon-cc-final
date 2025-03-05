@@ -17,8 +17,8 @@ export default function Navbar() {
           
           {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-8">
-          <Link href="/graphs" className="text-gray-700 hover:text-indigo-600 transition">
-              Graphs
+          <Link href="/voice-rec" className="text-gray-700 hover:text-indigo-600 transition">
+              Real-Time Translator
             </Link>
             <Link href="/#features" className="text-gray-700 hover:text-indigo-600 transition">
               Features
@@ -33,7 +33,7 @@ export default function Navbar() {
               Contact
             </Link>
             <a 
-              href="https://github.com/yourusername/project" 
+              href="https://github.com/Harkirattt/hackathon-cc-final" 
               target="_blank" 
               rel="noopener noreferrer"
               className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"

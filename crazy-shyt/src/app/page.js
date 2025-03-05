@@ -14,13 +14,7 @@ export default function Home() {
       <HeroSection />
       <ProjectFeatures />
       <DemoSection />
-      <TeamSection />
       <ContactSection />
-      <Translator />
-
-      <MapComponent />
-
-
     </main>
   );
 }

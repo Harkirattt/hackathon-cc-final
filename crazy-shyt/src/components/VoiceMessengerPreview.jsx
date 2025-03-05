@@ -1,6 +1,6 @@
 "use client"
-import React, { useState, useRef, useEffect } from "react";
-import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2, RefreshCw } from "lucide-react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2, RefreshCw, BookOpen, ChevronDown, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, Toaster } from "sonner";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -59,7 +59,137 @@ const VoiceMessengerWithSockets = () => {
   });
   const [error, setError] = useState(null);
 
+  const contextRef = useRef({
+    id: '',
+    topics: [],
+    keywords: [],
+    summary: ''
+  });
+  const [conversationContext, setConversationContext] = useState(contextRef.current);
+
+  const [isContextExpanded, setIsContextExpanded] = useState(false);
+
   const generateUniqueId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const downloadConversation = (messages, conversationContext) => {
+    // Convert messages to CSV format
+    const csvContent = [
+      // Header row
+      ['Sender', 'Message', 'Timestamp'],
+      // Message rows
+      ...messages.map(message => [
+        message.sender, 
+        message.translation || message.originalText, 
+        new Date(parseInt(message.id.split('_')[1])).toLocaleString()
+      ])
+    ];
+  
+    // Add conversation context as additional rows
+    if (conversationContext) {
+      csvContent.push(
+        [], // Empty row for separation
+        ['Conversation Context'],
+        ['Topics', conversationContext.topics.join(', ')],
+        ['Keywords', conversationContext.keywords.join(', ')],
+        ['Summary', conversationContext.summary]
+      );
+    }
+  
+    // Create CSV string
+    const csvString = csvContent.map(row => row.map(cell => 
+      `"${cell ? cell.replace(/"/g, '""') : ''}"`
+    ).join(','))
+    .join('\n');
+  
+    // Create and trigger download
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `conversation_${new Date().toISOString().replace(/:/g, '-')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const DownloadConversationButton = ({ messages, conversationContext }) => {
+    return (
+      <button 
+        onClick={() => downloadConversation(messages, conversationContext)}
+        className="flex items-center space-x-2 bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
+      >
+        <Download className="w-5 h-5" />
+        <span>Download Conversation</span>
+      </button>
+    );
+  };
+
+  const extractConversationContext = useCallback(async (messages) => {
+    console.log("Extracting context - Messages:", messages);
+    
+    if (!messages || messages.length === 0) {
+      console.log("No messages to extract context from");
+      return null;
+    }
+  
+    try {
+      const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA';
+      
+      // Combine both originalText and translation
+      const messagesText = messages
+        .map(m => m.originalText || m.translation || '')
+        .filter(text => text.trim() !== '')
+        .join(' ');
+  
+      console.log("Messages Text for Context:", messagesText);
+  
+      if (!messagesText.trim()) {
+        console.log("No text content to extract context from");
+        return null;
+      }
+  
+      const contextPrompt = `Carefully analyze the following real estate conversation and provide precise details:
+  1. Main Topics (2-4 categories)
+  2. Key Keywords (most significant terms)
+  3. Concise Summary
+  
+  Conversation: "${messagesText}"
+  
+  Please format your response exactly like this:
+  Topics: [topic1, topic2, ...]
+  Keywords: [keyword1, keyword2, ...]
+  Summary: Precise summary of the conversation`;
+  
+      const response = await getGeminiResponse(API_KEY, contextPrompt);
+      console.log("Context Extraction Response:", response);
+  
+      // More robust parsing of the response
+      const parseSection = (sectionName) => {
+        const regex = new RegExp(`${sectionName}:\\s*\\[(.*?)\\]`, 's');
+        const match = response.match(regex);
+        return match ? match[1].split(',').map(item => item.trim()).filter(Boolean) : [];
+      };
+  
+      const summaryMatch = response.match(/Summary:\s*(.*)/s);
+  
+      const newContext = {
+        id: `ctx_${Date.now()}`,
+        topics: parseSection('Topics'),
+        keywords: parseSection('Keywords'),
+        summary: summaryMatch ? summaryMatch[1].trim() : ''
+      };
+  
+      console.log("Extracted Context:", newContext);
+      
+      return newContext;
+    } catch (error) {
+      console.error("Error extracting conversation context:", error);
+      return null;
+    }
+  }, []);
+
 
   // Function to translate message using Gemini API
   const translateMessage = async (originalText, targetLanguage) => {
@@ -86,6 +216,81 @@ Original Text: "${originalText}"`
       setTranslationLoading(false);
       return originalText;
     }
+  };
+
+  const ConversationContextSidebar = () => {
+    // Check if there's any meaningful context to display
+    const hasContext = conversationContext && (
+      conversationContext.topics.length > 0 || 
+      conversationContext.keywords.length > 0 || 
+      conversationContext.summary
+    );
+  
+    if (!hasContext) {
+      return null;
+    }
+  
+    return (
+      <div className="w-80 bg-white shadow-xl p-6 overflow-y-auto h-full border-l">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-indigo-800 mb-4 flex items-center">
+            <BookOpen className="mr-3 text-indigo-600" />
+            Conversation Context
+          </h2>
+  
+          {/* Topics Section */}
+          {conversationContext.topics.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Topics</h3>
+              <div className="flex flex-wrap gap-2">
+                {conversationContext.topics.map((topic, index) => (
+                  <span 
+                    key={index} 
+                    className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm"
+                  >
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+  
+          {/* Keywords Section */}
+          {conversationContext.keywords.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Keywords</h3>
+              <div className="flex flex-wrap gap-2">
+                {conversationContext.keywords.map((keyword, index) => (
+                  <span 
+                    key={index} 
+                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+  
+          {/* Summary Section */}
+          {conversationContext.summary && (
+            <div>
+              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Summary</h3>
+              <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
+                {conversationContext.summary}
+              </p>
+            </div>
+          )}
+        </div>
+                        {username && (
+              <div className="flex justify-between items-center">
+                <DownloadConversationButton 
+                  messages={messages} 
+                  conversationContext={conversationContext} 
+                />
+              </div>)}
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -119,6 +324,14 @@ Original Text: "${originalText}"`
     // Listen for incoming messages and translate them
     newSocket.on('receive_message', async (message) => {
       console.log('Received message:', message);
+
+      const newMessage = {
+        id: message.id || `msg_${Date.now()}`,
+        sender: message.sender || username,
+        originalText: message.originalText || '',
+        translation: message.translation || message.originalText || '',
+        sourceLanguage: message.sourceLanguage || selectedLanguage
+      };
       
       // Translate the message if the target language is different
       const translatedMessage = message.sourceLanguage !== selectedLanguage 
@@ -130,7 +343,27 @@ Original Text: "${originalText}"`
         translation: translatedMessage
       };
 
-      setMessages(prevMessages => [...prevMessages, updatedMessage]);
+      setMessages(prevMessages => {
+        const updatedMessages = [...prevMessages, newMessage];
+        console.log('Updated Messages:', updatedMessages);
+        
+        // Extract context after adding message
+        extractConversationContext(updatedMessages).then(newContext => {
+          if (newContext) {
+            contextRef.current = newContext;
+            setConversationContext(newContext);
+          } else if (contextRef.current) {
+            // Fallback to previous context if new extraction fails
+            setConversationContext(contextRef.current);
+          }
+        });
+        
+        return updatedMessages;
+      });
+      setTimeout(() => {
+        extractConversationContext(messages);
+      }, 500);
+      console.log(conversationContext)
     });
 
     setSocket(newSocket);
@@ -256,6 +489,9 @@ Original Text: "${originalText}"`
   }
 
    return (
+    <div className="grid grid-cols-2 md:grid-cols-2 h-screen max-w">
+
+
     <div className="max-w-lg mx-auto h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col shadow-2xl">
       <Toaster richColors position="top-right" />
       {/* {!username && (
@@ -276,7 +512,7 @@ Original Text: "${originalText}"`
 
       {username && (
         <>
-          <div className="text-center py-4 border-b border-gray-300">
+          <div className="text-center py-4 w-[500px] border-b border-gray-300">
             <h1 className="text-xl font-bold text-gray-800">
               Real Estate VM
               {isConnected ? " (Connected)" : " (Disconnected)"}
@@ -440,7 +676,14 @@ Original Text: "${originalText}"`
           </motion.button>
         )}
       </motion.div>
+
     </div>
+    <div>
+      {username && <ConversationContextSidebar />}
+    </div>
+    </div>
+
+    
   );
 };
 
