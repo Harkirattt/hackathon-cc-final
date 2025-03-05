@@ -1,8 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
-      domains: ['unsplash.com'],
+      domains: ['images.unsplash.com', 'loremflickr.com'],
       remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: 'images.unsplash.com',
+          port: '',
+          pathname: '/**',
+        },
         {
           protocol: 'https',
           hostname: 'loremflickr.com',
@@ -10,8 +16,8 @@ const nextConfig = {
           pathname: '/**',
         },
       ],
-    
     },
   };
   
-export default nextConfig;
+  export default nextConfig;
+  
