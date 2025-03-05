@@ -169,7 +169,7 @@ const VoiceMessengerWithSockets = () => {
   Keywords: [keyword1, keyword2, ...]
   Summary: Precise summary of the conversation`;
   
-      const response = await getGeminiResponse(API_KEY, contextPrompt);
+      const response = await getGeminiResponse('AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew', contextPrompt);
       console.log("Context Extraction Response:", response);
   
       // More robust parsing of the response
