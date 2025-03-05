@@ -59,19 +59,49 @@ const marketTrendsData = [
 const RealEstateLandingPage = () => {
   const [location, setLocation] = useState("");
   const [enquiryName, setEnquiryName] = useState("");
+  const [enquiryPhone, setEnquiryPhone] = useState("");
   const [enquiryEmail, setEnquiryEmail] = useState("");
+  const [enquiryProperty, setEnquiryProperty] = useState("");
+  const [enquiryLocation, setEnquiryLocation] = useState("");
   const [enquiryMessage, setEnquiryMessage] = useState("");
   const [activeTab, setActiveTab] = useState('overview');
 
   const handleSubmitEnquiry = (e) => {
     e.preventDefault();
-    alert(`Enquiry Submitted!\nName: ${enquiryName}\nEmail: ${enquiryEmail}\nMessage: ${enquiryMessage}`);
-    
-    // Reset form
-    setEnquiryName("");
-    setEnquiryEmail("");
-    setEnquiryMessage("");
-  };
+    const newEnquiry = {
+        id: Date.now(), // Generate a unique ID
+        name: enquiryName,
+        phone: enquiryPhone,
+        email: enquiryEmail,
+        message: enquiryMessage,
+        location: enquiryLocation || "Not Specified",
+        propertyInterest: enquiryProperty || "Not Specified",
+        status: "pending",
+        timestamp: new Date().toISOString()
+      };
+  
+      // Retrieve existing enquiries from localStorage
+      const existingEnquiries = JSON.parse(localStorage.getItem('propertyEnquiries') || '[]');
+      
+      // Add new enquiry
+      const updatedEnquiries = [...existingEnquiries, newEnquiry];
+      
+      // Save to localStorage
+      localStorage.setItem('propertyEnquiries', JSON.stringify(updatedEnquiries));
+  
+      // Show success message
+      alert('Enquiry submitted successfully!');
+      
+      // Reset form
+      setEnquiryName("");
+      setEnquiryPhone("");
+      setEnquiryEmail("");
+      setEnquiryMessage("");
+      setEnquiryLocation("");
+      setEnquiryProperty("");
+    };
+  
+  
 
   return (
     <motion.div 
@@ -120,8 +150,8 @@ const RealEstateLandingPage = () => {
             </div>
           </motion.div>
           <motion.div 
-            initial={{ x: 50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 50, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
             className="md:w-1/2 mt-8 md:mt-0"
           >
@@ -129,7 +159,7 @@ const RealEstateLandingPage = () => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6 }}
-              src="/api/placeholder/600/400" 
+              src="/images/mumbai.webp" 
               alt="Mumbai Skyline" 
               className="rounded-2xl shadow-2xl border-4 border-white/20"
             />
@@ -298,10 +328,34 @@ const RealEstateLandingPage = () => {
               className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             />
             <input 
+              type="text" 
+              placeholder="Phone Number" 
+              value={enquiryPhone}
+              onChange={(e) => setEnquiryPhone(e.target.value)}
+              required
+              className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <input 
               type="email" 
               placeholder="Your Email" 
               value={enquiryEmail}
               onChange={(e) => setEnquiryEmail(e.target.value)}
+              required
+              className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <input 
+              type="text" 
+              placeholder="Location"
+              value={enquiryLocation} 
+              onChange={(e) => setEnquiryLocation(e.target.value)}
+              required
+              className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <input 
+              type="text" 
+              placeholder="Property Interest"
+              value={enquiryProperty} 
+              onChange={(e) => setEnquiryProperty(e.target.value)}
               required
               className="w-full p-3 border-2 border-green-100 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             />

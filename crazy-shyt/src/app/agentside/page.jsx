@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { 
   Calendar, 
   MapPin, 
@@ -114,6 +114,71 @@ const AgentDashboard = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [mapFilter, setMapFilter] = useState('all');
+  const [isLoading, setIsLoading] = useState(false);
+
+
+  useEffect(() => {
+    const fetchEnquiries = () => {
+      try {
+        setIsLoading(true);
+        const storedEnquiries = localStorage.getItem('propertyEnquiries');
+        if (storedEnquiries) {
+          const parsedEnquiries = JSON.parse(storedEnquiries).map(enquiry => ({
+            ...enquiry,
+            timestamp: new Date(enquiry.timestamp)
+          }));
+          setEnquiries(parsedEnquiries);
+        }
+      } catch (error) {
+        console.error('Error fetching enquiries:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEnquiries();
+
+    // Optional: Add event listener for changes in localStorage
+    const handleStorageChange = () => {
+        fetchEnquiries();
+      };
+  
+      window.addEventListener('storage', handleStorageChange);
+  
+      // Cleanup listener
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }, []);
+
+    // Update enquiry status
+  const updateEnquiryStatus = (id, status) => {
+    try {
+      // Get current enquiries from localStorage
+      const storedEnquiries = JSON.parse(localStorage.getItem('propertyEnquiries') || '[]');
+      
+      // Find and update the specific enquiry
+      const updatedEnquiries = storedEnquiries.map(enquiry => 
+        enquiry.id === id ? { ...enquiry, status } : enquiry
+      );
+
+      // Save back to localStorage
+      localStorage.setItem('propertyEnquiries', JSON.stringify(updatedEnquiries));
+
+      // Update local state
+      setEnquiries(updatedEnquiries.map(enquiry => ({
+        ...enquiry,
+        timestamp: new Date(enquiry.timestamp)
+      })));
+
+      // Close the modal
+      setSelectedEnquiry(null);
+    } catch (error) {
+      console.error('Error updating enquiry:', error);
+      alert('An error occurred while updating the enquiry');
+    }
+  };
+
 
   // Filtering and searching functions
   const filteredEnquiries = enquiries.filter(enquiry => 
@@ -130,7 +195,18 @@ const AgentDashboard = () => {
 
   // Refresh enquiries function
   const refreshEnquiries = () => {
-    setEnquiries(generateEnquiries());
+    try {
+      const storedEnquiries = localStorage.getItem('propertyEnquiries');
+      if (storedEnquiries) {
+        const parsedEnquiries = JSON.parse(storedEnquiries).map(enquiry => ({
+          ...enquiry,
+          timestamp: new Date(enquiry.timestamp)
+        }));
+        setEnquiries(parsedEnquiries);
+      }
+    } catch (error) {
+      console.error('Error refreshing enquiries:', error);
+    }
   };
 
   return (
