@@ -93,13 +93,13 @@ export default function Navbar() {
               Contact
             </Link>
             <a 
-              href="https://github.com/yourusername/project" 
+              href="/login" 
               target="_blank" 
               rel="noopener noreferrer"
               className="block px-3 py-2 text-indigo-600 font-medium hover:bg-indigo-100 rounded-md"
               onClick={() => setIsMenuOpen(false)}
             >
-              GitHub
+              Login
             </a>
           </div>
         </div>

@@ -233,7 +233,7 @@
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="min-h-screen bg-gradient-to-br pt-20 from-gray-50 to-gray-100 p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Enquiries Section */}
             <motion.div 

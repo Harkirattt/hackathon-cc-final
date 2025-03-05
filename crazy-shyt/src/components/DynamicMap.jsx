@@ -25,7 +25,7 @@ const DynamicMap = ({ center }) => {
     <MapContainer
       center={center}
       zoom={13}
-      style={{ height: '100%', width: '100%' }}
+      style={{ height: '100%', width: '100%' , zIndex: 2}}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
