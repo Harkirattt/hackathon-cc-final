@@ -10,27 +10,6 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
-function cleanReportText(text) {
-  // Remove hash symbols at the start of lines
-  let cleanedText = text.replace(/^#+\s*/gm, '');
-  
-  // Remove asterisks while preserving the text inside them
-  cleanedText = cleanedText.replace(/\*([^*]+)\*/g, '$1');
-  
-  // Remove multiple consecutive newlines
-  cleanedText = cleanedText.replace(/\n{3,}/g, '\n\n');
-  
-  // Normalize line breaks
-  cleanedText = cleanedText.replace(/\r\n/g, '\n');
-  
-  // Add proper paragraph spacing
-  cleanedText = cleanedText.split('\n').map(line => line.trim()).filter(line => line).join('\n\n');
-  
-  // Trim leading and trailing whitespace
-  return cleanedText.trim();
-}
-
-
 export async function getGeminiResponse( prompt) {
   
   const genAI = new GoogleGenerativeAI('AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM');
@@ -108,72 +87,6 @@ const VoiceMessengerWithSockets = () => {
   //   console.log('Download Completed');
   // }
 
-  async function fetchPollutionsImage(prompt, retries = 3) {
-    const imagePrompts = [
-      prompt,
-      `Professional illustration of ${prompt}`,
-      `Clean, minimalist graphic representing ${prompt}`,
-      'Business communication landscape',
-      `Photorealistic image of ${prompt}`,
-      `Detailed vector illustration of ${prompt}`
-    ];
-  
-    const validateImage = async (imageBlob) => {
-      try {
-        const arrayBuffer = await imageBlob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        
-        // PNG file signature check
-        const isPNG = uint8Array[0] === 0x89 && 
-                      uint8Array[1] === 0x50 && 
-                      uint8Array[2] === 0x4E && 
-                      uint8Array[3] === 0x47;
-        
-        // Additional checks for image validity
-        const isValidImage = isPNG && 
-                             uint8Array.length > 100 && // Minimum file size
-                             imageBlob.type.startsWith('image/png');
-        
-        return isValidImage;
-      } catch (error) {
-        console.error("Image validation error:", error);
-        return false;
-      }
-    };
-  
-    for (let attempt = 0; attempt < retries; attempt++) {
-      for (const currentPrompt of imagePrompts) {
-        try {
-          const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(currentPrompt)}`, {
-            method: 'GET'
-            // Removed problematic headers
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-  
-          const imageBlob = await response.blob();
-          
-          // Validate the image
-          const isValidImage = await validateImage(imageBlob);
-          
-          if (isValidImage) {
-            return URL.createObjectURL(imageBlob);
-          }
-        } catch (error) {
-          console.warn(`Image fetch failed for prompt "${currentPrompt}" (Attempt ${attempt + 1}):`, error);
-        }
-      }
-  
-      // Add a small delay between retry attempts
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  
-    console.error("Failed to generate valid image after all attempts");
-    return null;
-  }
-  
   // Existing getGeminiResponse function from the original code
   async function getGeminiResponse(prompt) {
     const genAI = new GoogleGenerativeAI('AIzaSyCcUJrAVs6eOzqnguUPXCNhn1BmDWY2niM');
@@ -191,290 +104,144 @@ const VoiceMessengerWithSockets = () => {
   }
   
   // Improved text wrapping function
-  function wrapText(text, font, fontSize, maxWidth) {
-    // Clean the text first
-    const cleanedText = cleanReportText(text);
-    
-    const words = cleanedText.split(/\s+/);
-    const lines = [];
-    let currentLine = '';
-  
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word;
-      
-      // Check if adding this word would exceed the max width
-      const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
-      
-      if (lineWidth <= maxWidth) {
-        currentLine = testLine;
-      } else {
-        // If current line is not empty, add it to lines
-        if (currentLine) {
-          lines.push(currentLine);
-        }
-        currentLine = word;
-      }
-    }
-  
-    // Add the last line
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-  
-    return lines;
-  }
-  
-  
-  // New function to generate comprehensive PDF report
-  // Improved text wrapping function
-function wrapText(text, font, fontSize, maxWidth) {
-  // Remove newline characters and extra whitespace
-  const cleanedText = text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
-  
-  const words = cleanedText.split(' ');
-  const lines = [];
-  let currentLine = '';
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    
-    // Check if adding this word would exceed the max width
-    const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
-    
-    if (lineWidth <= maxWidth) {
-      currentLine = testLine;
-    } else {
-      // If current line is not empty, add it to lines
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-      currentLine = word;
+// New function to generate comprehensive PDF repor
+
+  const downloadConversation = async (messages, conversationContext) => {
+  // Create a new PDF document
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([600, 800]); // Adjust page size as needed
+
+  // Load a standard font
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  // Set initial y position for text
+  let y = 750;
+
+  // Add conversation title
+  page.drawText('Conversation Report', {
+    x: 50,
+    y,
+    size: 24,
+    font,
+    color: rgb(0, 0, 0),
+  });
+  y -= 30;
+
+  // Add conversation context
+  if (conversationContext) {
+    page.drawText('Conversation Context:', {
+      x: 50,
+      y,
+      size: 18,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    y -= 20;
+
+    if (conversationContext.topics.length > 0) {
+      page.drawText(`Topics: ${conversationContext.topics.join(', ')}`, {
+        x: 50,
+        y,
+        size: 12,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= 15;
+    }
+
+    if (conversationContext.keywords.length > 0) {
+      page.drawText(`Keywords: ${conversationContext.keywords.join(', ')}`, {
+        x: 50,
+        y,
+        size: 12,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= 15;
+    }
+
+    if (conversationContext.summary) {
+      page.drawText(`Summary: ${conversationContext.summary}`, {
+        x: 50,
+        y,
+        size: 12,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= 30;
     }
   }
 
-  // Add the last line
-  if (currentLine) {
-    lines.push(currentLine);
-  }
+  // Add messages
+  page.drawText('Messages:', {
+    x: 50,
+    y,
+    size: 18,
+    font,
+    color: rgb(0, 0, 0),
+  });
+  y -= 20;
 
-  return lines;
+  messages.forEach((message) => {
+    const messageText = `${message.sender}: ${message.translation || message.originalText}`;
+    page.drawText(messageText, {
+      x: 50,
+      y,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    y -= 15;
+
+    // Add a small separator between messages
+    page.drawLine({
+      start: { x: 50, y },
+      end: { x: 550, y },
+      thickness: 1,
+      color: rgb(0.8, 0.8, 0.8),
+    });
+    y -= 10;
+  });
+
+  // Add images (example)
+  const imageUrl = 'https://example.com/sample-image.jpg'; // Replace with your image URL
+  const imageBytes = await fetch(imageUrl).then((res) => res.arrayBuffer());
+  const image = await pdfDoc.embedJpg(imageBytes);
+  const { width, height } = image.scale(0.5); // Scale image to fit
+  page.drawImage(image, {
+    x: 50,
+    y: y - height,
+    width,
+    height,
+  });
+  y -= height + 20;
+
+  // Save the PDF
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute('href', url);
+  link.setAttribute('download', `conversation_report_${new Date().toISOString().replace(/:/g, '-')}.pdf`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
-// New function to generate comprehensive PDF report
-const generatePDFReport = async (messages, conversationContext) => {
-  try {
-    // Create a new PDF document
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([600, 800]);
-    const { width, height } = page.getSize();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-    // Generate a comprehensive report text using Gemini
-    const reportPrompt = `Create a professional, concise report summarizing this conversation context. 
-    Include:
-    - Overall conversation summary
-    - Key topics discussed
-    - Significant keywords
-    - Insights and potential next steps
-
-    NOTE: Don't Make Text Bold
-    
-    Conversation Context:
-    Topics: ${conversationContext.topics.join(', ')}
-    Keywords: ${conversationContext.keywords.join(', ')}
-    Summary: ${conversationContext.summary}`;
-
-    const reportText = await getGeminiResponse(reportPrompt);
-
-    // Generate images for the report with enhanced error handling
-    const mainImageUrl = await fetchPollutionsImage(
-      conversationContext.topics[0] || 'professional business meeting'
-    );
-    const summaryImageUrl = await fetchPollutionsImage(
-      conversationContext.keywords.slice(0, 2).join(' and ') || 'business communication'
-    );
-
-    // Add title
-    const titleFontSize = 24;
-    page.drawText('Conversation Report', {
-      x: 50,
-      y: height - 50,
-      size: titleFontSize,
-      font: boldFont,
-      color: rgb(0.1, 0.1, 0.5)
-    });
-
-    // Add context details
-    let yPosition = height - 100;
-    const fontSize = 12;
-    const lineHeight = 15;
-
-    // Draw context details
-    page.drawText(`Conversation Topics: ${conversationContext.topics.join(', ')}`, {
-      x: 50,
-      y: yPosition,
-      size: fontSize,
-      font: font,
-      color: rgb(0, 0, 0)
-    });
-    yPosition -= lineHeight;
-
-    page.drawText(`Keywords: ${conversationContext.keywords.join(', ')}`, {
-      x: 50,
-      y: yPosition,
-      size: fontSize,
-      font: font,
-      color: rgb(0, 0, 0)
-    });
-    yPosition -= lineHeight * 2;
-
-    // Use improved text wrapping
-    const textLines = wrapText(
-      reportText, 
-      font, 
-      fontSize, 
-      width - 100  // Max width
-    );
-
-    // Draw wrapped text lines
-    textLines.forEach(line => {
-      page.drawText(line, {
-        x: 50,
-        y: yPosition,
-        size: fontSize,
-        font: font,
-        color: rgb(0, 0, 0)
-      });
-      yPosition -= lineHeight;
-
-      // Stop if we're near the bottom of the page
-      if (yPosition < 100) {
-        // Add a new page if needed
-        const newPage = pdfDoc.addPage([600, 800]);
-        yPosition = height - 50;
-      }
-    });
-
-    // Add images if available with robust error handling
-    try {
-      if (mainImageUrl) {
-        const mainImageBytes = await fetch(mainImageUrl).then(res => res.arrayBuffer());
-        const mainImage = await pdfDoc.embedPng(mainImageBytes);
-        page.drawImage(mainImage, {
-          x: 50,
-          y: 50,
-          width: 200,
-          height: 150
-        });
-      }
-
-      if (summaryImageUrl) {
-        const summaryImageBytes = await fetch(summaryImageUrl).then(res => res.arrayBuffer());
-        const summaryImage = await pdfDoc.embedPng(summaryImageBytes);
-        page.drawImage(summaryImage, {
-          x: width - 250,
-          y: 50,
-          width: 200,
-          height: 150
-        });
-      }
-    } catch (imageError) {
-      console.warn('Image embedding failed:', imageError);
-      // Optionally, you could draw a placeholder or skip image embedding
-      page.drawText('Image could not be embedded', {
-        x: 50,
-        y: 100,
-        size: 10,
-        font: font,
-        color: rgb(0.5, 0.5, 0.5)
-      });
-    }
-
-    // Serialize PDF to bytes
-    const pdfBytes = await pdfDoc.save();
-
-    // Create and trigger download
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.href = url;
-    link.download = `conversation_report_${new Date().toISOString().replace(/:/g, '-')}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success('PDF Report Generated', {
-      description: 'Your conversation report has been downloaded.'
-    });
-
-  } catch (error) {
-    console.error("PDF Report Generation Error:", error);
-    toast.error('Report Generation Failed', {
-      description: 'Unable to generate PDF report.'
-    });
-  }
+const DownloadConversationButton = ({ messages, conversationContext }) => {
+  return (
+    <button 
+      onClick={() => downloadConversation(messages, conversationContext)}
+      className="flex items-center space-x-2 bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
+    >
+      <FileText className="w-5 h-5" />
+      <span>Generate PDF Report</span>
+    </button>
+  );
 };
-
-  
-
-
-
-  const downloadConversation = (messages, conversationContext) => {
-    // Convert messages to CSV format
-    const csvContent = [
-      // Header row
-      ['Sender', 'Message', 'Timestamp'],
-      // Message rows
-      ...messages.map(message => [
-        message.sender, 
-        message.translation || message.originalText, 
-        new Date(parseInt(message.id.split('_')[1])).toLocaleString()
-      ])
-    ];
-  
-    // Add conversation context as additional rows
-    if (conversationContext) {
-      csvContent.push(
-        [], // Empty row for separation
-        ['Conversation Context'],
-        ['Topics', conversationContext.topics.join(', ')],
-        ['Keywords', conversationContext.keywords.join(', ')],
-        ['Summary', conversationContext.summary]
-      );
-    }
-
-        // Create CSV string
-    const csvString = csvContent.map(row => row.map(cell => 
-      `"${cell ? cell.replace(/"/g, '""') : ''}"`
-    ).join(','))
-    .join('\n');
-  
-    // Create and trigger download
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `conversation_${new Date().toISOString().replace(/:/g, '-')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const DownloadConversationButton = ({ messages, conversationContext }) => {
-    return (
-      <button 
-        onClick={() => generatePDFReport(messages, conversationContext)}
-        className="flex items-center space-x-2 bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
-      >
-        <FileText className="w-5 h-5" />
-        <span>Generate PDF Report</span>
-      </button>
-    );
-  };
 
   const extractConversationContext = useCallback(async (messages) => {
     console.log("Extracting context - Messages:", messages);
