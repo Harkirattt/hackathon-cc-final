@@ -23,25 +23,8 @@ export default function HeroSection() {
               </div>
             </div>
             <div className="mt-6 flex items-center space-x-4">
-              <div className="flex -space-x-2">
-                <img 
-                  className="inline-block h-8 w-8 rounded-full ring-2 ring-white" 
-                  src="/api/placeholder/40/40" 
-                  alt="Team Member" 
-                />
-                <img 
-                  className="inline-block h-8 w-8 rounded-full ring-2 ring-white" 
-                  src="/api/placeholder/40/40" 
-                  alt="Team Member" 
-                />
-                <img 
-                  className="inline-block h-8 w-8 rounded-full ring-2 ring-white" 
-                  src="/api/placeholder/40/40" 
-                  alt="Team Member" 
-                />
-              </div>
               <span className="text-sm text-indigo-100">
-                Built by passionate developers at the hackathon
+                Built by passionate developers at Cyber Cypher 4.0
               </span>
             </div>
           </div>

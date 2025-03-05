@@ -4,7 +4,9 @@ import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, Toaster } from "sonner";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+import DynamicMap from "./DynamicMap";
 import io from 'socket.io-client';
+import { useRouter } from "next/navigation";
 import axios from 'axios';
 
 export async function getGeminiResponse(apiKey, prompt) {
@@ -42,6 +44,8 @@ const supportedLanguages = [
 ];
 
 const VoiceMessengerWithSockets = () => {
+
+  const router = useRouter();
   const [messages, setMessages] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("en-US");
@@ -225,74 +229,107 @@ Original Text: "${originalText}"`
       conversationContext.keywords.length > 0 || 
       conversationContext.summary
     );
+
+    const locationKeywords = conversationContext?.keywords.filter(keyword => 
+      /(city|address|location|place|area|region)/i.test(keyword)
+    );
+
+    const defaultCenter = [19.0760, 72.8777];
+
+    const handleMoreDetails = () => {
+      router.push('/clientside');
+    };
   
     if (!hasContext) {
       return null;
     }
   
     return (
-      <div className="w-80 bg-white shadow-xl p-6 overflow-y-auto h-full border-l">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-indigo-800 mb-4 flex items-center">
-            <BookOpen className="mr-3 text-indigo-600" />
-            Conversation Context
-          </h2>
+      <div className="w-full h-full bg-white shadow-xl flex w-[600px]">
+        {/* Left Side: Conversation Context */}
+        <div className="w-1/2 p-6 overflow-y-auto border-r">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-indigo-800 mb-4 flex items-center">
+              <BookOpen className="mr-3 text-indigo-600" />
+              Conversation Context
+            </h2>
   
-          {/* Topics Section */}
-          {conversationContext.topics.length > 0 && (
-            <div className="mb-4">
-              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Topics</h3>
-              <div className="flex flex-wrap gap-2">
-                {conversationContext.topics.map((topic, index) => (
-                  <span 
-                    key={index} 
-                    className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm"
-                  >
-                    {topic}
-                  </span>
-                ))}
+            {/* Topics Section */}
+            {conversationContext.topics.length > 0 && (
+              <div className="mb-4">
+                <h3 className="font-semibold text-lg text-indigo-700 mb-2">Topics</h3>
+                <div className="flex flex-wrap gap-2">
+                  {conversationContext.topics.map((topic, index) => (
+                    <span 
+                      key={index} 
+                      className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm"
+                    >
+                      {topic}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
   
-          {/* Keywords Section */}
-          {conversationContext.keywords.length > 0 && (
-            <div className="mb-4">
-              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Keywords</h3>
-              <div className="flex flex-wrap gap-2">
-                {conversationContext.keywords.map((keyword, index) => (
-                  <span 
-                    key={index} 
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
-                  >
-                    {keyword}
-                  </span>
-                ))}
+            {/* Keywords Section */}
+            {conversationContext.keywords.length > 0 && (
+              <div className="mb-4">
+                <h3 className="font-semibold text-lg text-indigo-700 mb-2">Keywords</h3>
+                <div className="flex flex-wrap gap-2">
+                  {conversationContext.keywords.map((keyword, index) => (
+                    <span 
+                      key={index} 
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
   
-          {/* Summary Section */}
-          {conversationContext.summary && (
-            <div>
-              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Summary</h3>
-              <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
-                {conversationContext.summary}
-              </p>
+            {/* Summary Section */}
+            {conversationContext.summary && (
+              <div>
+                <h3 className="font-semibold text-lg text-indigo-700 mb-2">Summary</h3>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
+                  {conversationContext.summary}
+                </p>
+              </div>
+            )}
+          </div>
+  
+          {username && (
+            <div className="flex justify-between items-center">
+              <DownloadConversationButton 
+                messages={messages} 
+                conversationContext={conversationContext} 
+              />
             </div>
           )}
         </div>
-                        {username && (
-              <div className="flex justify-between items-center">
-                <DownloadConversationButton 
-                  messages={messages} 
-                  conversationContext={conversationContext} 
-                />
-              </div>)}
+  
+        {/* Right Side: Map */}
+        <div className="w-1/2 p-6">
+          {locationKeywords.length > 0 && (
+            <div className="h-full flex flex-col">
+              <h3 className="font-semibold text-lg text-indigo-700 mb-2">Location</h3>
+              <div className="flex-grow rounded-lg overflow-hidden">
+                <DynamicMap center={defaultCenter} />
+              </div>
+              <button
+                onClick={handleMoreDetails}
+                className="mt-2 w-full bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors"
+              >
+                More Details
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
-
+    
   useEffect(() => {
     const newSocket = io('http://localhost:5000', {
       transports: ['websocket'],
@@ -512,7 +549,7 @@ Original Text: "${originalText}"`
 
       {username && (
         <>
-          <div className="text-center py-4 w-[500px] border-b border-gray-300">
+          <div className="text-center py-4 border-b border-gray-300">
             <h1 className="text-xl font-bold text-gray-800">
               Real Estate VM
               {isConnected ? " (Connected)" : " (Disconnected)"}
@@ -590,7 +627,7 @@ Original Text: "${originalText}"`
         animate={{ opacity: 1, y: 0 }}
         className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center shadow-sm"
       >
-        <div className="flex items-center w-[500px] space-x-3">
+        <div className="flex items-center space-x-3">
           <UserCircle2 className="text-indigo-600" />
           <h1 className="text-xl font-bold text-gray-800">
             {username || "Voice Messenger"}
@@ -678,7 +715,7 @@ Original Text: "${originalText}"`
       </motion.div>
 
     </div>
-    <div>
+    <div className="w-[900px]">
       {username && <ConversationContextSidebar />}
     </div>
     </div>
