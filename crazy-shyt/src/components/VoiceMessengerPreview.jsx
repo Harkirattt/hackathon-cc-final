@@ -141,9 +141,15 @@ const VoiceMessengerWithSockets = () => {
       return null;
     }
   
+    // Improved API key retrieval
+    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew';
+    
+    if (!API_KEY) {
+      console.error("No Gemini API key found. Please check your environment variables.");
+      return null;
+    }
+  
     try {
-      const API_KEY = 'AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew';
-      
       // Combine both originalText and translation
       const messagesText = messages
         .map(m => m.originalText || m.translation || '')
@@ -169,7 +175,7 @@ const VoiceMessengerWithSockets = () => {
   Keywords: [keyword1, keyword2, ...]
   Summary: Precise summary of the conversation`;
   
-      const response = await getGeminiResponse('AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew', contextPrompt);
+      const response = await getGeminiResponse(API_KEY, contextPrompt);
       console.log("Context Extraction Response:", response);
   
       // More robust parsing of the response
@@ -193,6 +199,14 @@ const VoiceMessengerWithSockets = () => {
       return newContext;
     } catch (error) {
       console.error("Error extracting conversation context:", error);
+      
+      // Provide more detailed error logging
+      if (error instanceof Error) {
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      
       return null;
     }
   }, []);
