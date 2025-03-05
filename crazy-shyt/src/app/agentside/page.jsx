@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Calendar, 
   MapPin, 
@@ -23,9 +23,12 @@ import {
   Tooltip 
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the DynamicMap component
+const DynamicMap = dynamic(() => import('../../components/DynamicMap'), {
+  ssr: false,
+});
 
 // Expanded and more dynamic sample data
 const generateEnquiries = () => {
@@ -274,33 +277,11 @@ const AgentDashboard = () => {
           </div>
           
           <div className="h-[500px]">
-            <MapContainer 
+            <DynamicMap 
               center={[19.0760, 72.8777]} 
               zoom={11} 
-              scrollWheelZoom={false}
-              style={{ height: '100%', width: '100%' }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap contributors'
-              />
-              {filteredHouseLocations.map((house) => (
-                <Marker 
-                  key={house.id} 
-                  position={[house.lat, house.lng]}
-                >
-                  <Popup>
-                    <div>
-                      <h3 className="font-bold">{house.name}</h3>
-                      <p>Price: {house.price}</p>
-                      <p>Type: {house.type}</p>
-                      <p>Bedrooms: {house.bedrooms}</p>
-                      <p>Area: {house.area} sq ft</p>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+              locations={filteredHouseLocations}
+            />
           </div>
         </motion.div>
       </div>
