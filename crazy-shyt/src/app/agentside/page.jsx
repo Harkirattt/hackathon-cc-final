@@ -1,6 +1,6 @@
-"use client";
-    
-    import React, { useState, useEffect } from 'react';
+    "use client";
+
+    import React, { useState,useEffect } from 'react';
     import { Resend } from 'resend';
     import { 
     Calendar, 
@@ -31,8 +31,120 @@
     ssr: false,
     });
 
-    // Rest of the existing code remains the same...
+    const sendEmail = (enquiry) => {
+        // Construct email details
+        const subject = encodeURIComponent("Property Enquiry Update");
+        const body = encodeURIComponent(`Dear ${enquiry.name},
 
+We have reviewed your enquiry for ${enquiry.propertyInterest} in ${enquiry.location}. 
+Our agent will contact you shortly.
+
+Best regards,
+Your Real Estate Team`);
+
+        // Open default email client
+        window.location.href = `mailto:${enquiry.email}?subject=${subject}&body=${body}`;
+    };
+
+    // Expanded and more dynamic sample data
+    const generateEnquiries = () => {
+    return [
+        {
+        id: 1,
+        name: "Rahul Sharma",
+        location: "Malad West",
+        phone: "+91 9876543210",
+        email: "rahul.sharma@email.com",
+        status: "pending",
+        propertyInterest: "2 BHK Apartment",
+        budget: "₹1.5 - 2.5 Cr",
+        timestamp: new Date(2024, 2, 15, 10, 30)
+        },
+        {
+        id: 2,
+        name: "Priya Patel",
+        location: "Juhu",
+        phone: "+91 8765432109",
+        email: "priya.patel@email.com",
+        status: "contacted",
+        propertyInterest: "Sea-facing Penthouse",
+        budget: "₹5 - 8 Cr",
+        timestamp: new Date(2024, 2, 14, 15, 45)
+        },
+        {
+        id: 3,
+        name: "Amit Kumar",
+        location: "Andheri East",
+        phone: "+91 7654321098",
+        email: "amit.kumar@email.com",
+        status: "pending",
+        propertyInterest: "Commercial Space",
+        budget: "₹3 - 5 Cr",
+        timestamp: new Date(2024, 2, 13, 9, 15)
+        }
+    ];
+    };
+
+    const houseLocations = [
+    { 
+        id: 1, 
+        lat: 19.1729, 
+        lng: 72.8478, 
+        name: "Luxurious Malad Apartment", 
+        price: "₹2.5 Cr",
+        type: "Residential",
+        bedrooms: 3,
+        area: 1200
+    },
+    { 
+        id: 2, 
+        lat: 19.0896, 
+        lng: 72.8250, 
+        name: "Beachfront Juhu Penthouse", 
+        price: "₹7.5 Cr",
+        type: "Luxury",
+        bedrooms: 4,
+        area: 2500
+    },
+    { 
+        id: 3, 
+        lat: 19.1171, 
+        lng: 72.8464, 
+        name: "Modern Andheri West Flat", 
+        price: "₹3.2 Cr",
+        type: "Residential",
+        bedrooms: 3,
+        area: 1500
+    }
+    ];
+
+    const housesPerArea = [
+    { area: "Malad", houses: 12, avgPrice: "₹2.5 Cr" },
+    { area: "Juhu", houses: 8, avgPrice: "₹6 Cr" },
+    { area: "Andheri", houses: 15, avgPrice: "₹3.5 Cr" }
+    ];
+
+    // API_KEY = process.env.RESEND_API_KEY;
+
+    // const resend = new Resend(API_KEY);
+
+    // const sendEmail = async (to, subject, text) => {
+    // try {
+    //     const { data, error } = await resend.emails.send({
+    //     from: 'parth.r.lohia@gmail.com',
+    //     to: [to],
+    //     subject: subject,
+    //     html: text
+    //     });
+
+    //     if (error) {
+    //     console.error({ error });
+    //     }
+    //     console.log({ data });
+    // } catch (error) {
+    //     console.error('Error sending email', error);
+    // }
+    // };
     const AgentDashboard = () => {
     const [enquiries, setEnquiries] = useState(generateEnquiries());
     const [selectedEnquiry, setSelectedEnquiry] = useState(null);
@@ -41,80 +153,77 @@
     const [mapFilter, setMapFilter] = useState('all');
     const [isLoading, setIsLoading] = useState(false);
 
-    // Add Resend initialization
-    const API_KEY = "re_NJRyi2Sm_QDE4fc6R72C2TBYfEZRAuWyr";
-    const resend = new Resend(API_KEY);
 
-    // Email sending function
-    const sendEmail = async (to, subject, text) => {
+    useEffect(() => {
+        const fetchEnquiries = () => {
         try {
-            const { data, error } = await resend.emails.send({
-                from: 'parth.r.lohia@gmail.com',
-                to: [to],
-                subject: subject,
-                html: text
-            });
-
-            if (error) {
-                console.error({ error });
-                alert('Failed to send email');
-                return false;
-            }
-            console.log({ data });
-            return true;
-        } catch (error) {
-            console.error('Error sending email', error);
-            alert('Failed to send email');
-            return false;
-        }
-    };
-
-    // Update existing updateEnquiryStatus to include email sending
-    const updateEnquiryStatus = async (id, status) => {
-        try {
-            // Get current enquiries from localStorage
-            const storedEnquiries = JSON.parse(localStorage.getItem('propertyEnquiries') || '[]');
-            
-            // Find the specific enquiry
-            const enquiryToUpdate = storedEnquiries.find(enquiry => enquiry.id === id);
-            
-            // If status is 'contacted', send an email
-            if (status === 'contacted' && enquiryToUpdate) {
-                const emailSent = await sendEmail(
-                    enquiryToUpdate.email, 
-                    'Property Enquiry Update', 
-                    `Dear ${enquiryToUpdate.name},<br/><br/>
-                    We have reviewed your enquiry for ${enquiryToUpdate.propertyInterest} 
-                    in ${enquiryToUpdate.location}. Our agent will contact you shortly.<br/><br/>
-                    Best regards,<br/>
-                    Your Real Estate Team`
-                );
-
-                // Only update status if email is sent successfully
-                if (!emailSent) return;
-            }
-            
-            // Find and update the specific enquiry
-            const updatedEnquiries = storedEnquiries.map(enquiry => 
-                enquiry.id === id ? { ...enquiry, status } : enquiry
-            );
-
-            // Save back to localStorage
-            localStorage.setItem('propertyEnquiries', JSON.stringify(updatedEnquiries));
-
-            // Update local state
-            setEnquiries(updatedEnquiries.map(enquiry => ({
+            setIsLoading(true);
+            const storedEnquiries = localStorage.getItem('propertyEnquiries');
+            if (storedEnquiries) {
+            const parsedEnquiries = JSON.parse(storedEnquiries).map(enquiry => ({
                 ...enquiry,
                 timestamp: new Date(enquiry.timestamp)
-            })));
-
-            // Close the modal
-            setSelectedEnquiry(null);
+            }));
+            setEnquiries(parsedEnquiries);
+            }
         } catch (error) {
-            console.error('Error updating enquiry:', error);
-            alert('An error occurred while updating the enquiry');
+            console.error('Error fetching enquiries:', error);
+        } finally {
+            setIsLoading(false);
         }
-    };
+        };
+
+        fetchEnquiries();
+
+        // Optional: Add event listener for changes in localStorage
+        const handleStorageChange = () => {
+            fetchEnquiries();
+        };
+    
+        window.addEventListener('storage', handleStorageChange);
+    
+        // Cleanup listener
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+        }, []);
+
+        // Update enquiry status
+        const updateEnquiryStatus = (id, status) => {
+            try {
+                // Get current enquiries from localStorage
+                const storedEnquiries = JSON.parse(localStorage.getItem('propertyEnquiries') || '[]');
+                
+                // Find the specific enquiry
+                const enquiryToUpdate = storedEnquiries.find(enquiry => enquiry.id === id);
+                
+                // If status is 'contacted', trigger email
+                if (status === 'contacted' && enquiryToUpdate) {
+                    // Send email
+                    sendEmail(enquiryToUpdate);
+                }
+                
+                // Find and update the specific enquiry
+                const updatedEnquiries = storedEnquiries.map(enquiry => 
+                    enquiry.id === id ? { ...enquiry, status } : enquiry
+                );
+    
+                // Save back to localStorage
+                localStorage.setItem('propertyEnquiries', JSON.stringify(updatedEnquiries));
+    
+                // Update local state
+                setEnquiries(updatedEnquiries.map(enquiry => ({
+                    ...enquiry,
+                    timestamp: new Date(enquiry.timestamp)
+                })));
+    
+                // Close the modal
+                setSelectedEnquiry(null);
+            } catch (error) {
+                console.error('Error updating enquiry:', error);
+                alert('An error occurred while updating the enquiry');
+            }
+        };
 
 
     // Filtering and searching functions
@@ -147,7 +256,7 @@
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br pt-20 from-gray-50 to-gray-100 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Enquiries Section */}
             <motion.div 
