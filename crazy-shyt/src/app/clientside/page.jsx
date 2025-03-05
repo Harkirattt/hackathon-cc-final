@@ -1,5 +1,4 @@
-"use client";
-
+'use client';
 import React, { useState } from 'react';
 import { MapPin, Search, TrendingUp, Home, Mail, ChevronDown } from 'lucide-react';
 import { 
@@ -18,7 +17,7 @@ const popularProperties = [
   {
     id: 1,
     title: "Luxurious Malad Apartment",
-    price: "₹2.7 Crore",
+    price: "₹2.5 Crore",
     location: "Malad West, Mumbai",
     bedrooms: 3,
     bathrooms: 2,
@@ -28,7 +27,7 @@ const popularProperties = [
   {
     id: 2,
     title: "Beachfront Juhu Penthouse",
-    price: "₹6.8 Crore",
+    price: "₹7.5 Crore",
     location: "Juhu, Mumbai", 
     bedrooms: 4,
     bathrooms: 3,
@@ -38,7 +37,7 @@ const popularProperties = [
   {
     id: 3,
     title: "Modern Andheri West Flat",
-    price: "₹3.4 Crore",
+    price: "₹3.2 Crore",
     location: "Andheri West, Mumbai",
     bedrooms: 3,
     bathrooms: 2,
@@ -66,52 +65,13 @@ const RealEstateLandingPage = () => {
 
   const handleSubmitEnquiry = (e) => {
     e.preventDefault();
-        console.log('Enquiry Submitted:', enquiryForm);
-    alert('Thank you for your enquiry! We will get back to you soon.');
-  };
-
-  const handleChatSubmit = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const userMessage = { 
-      id: chatMessages.length + 1, 
-      text: newMessage, 
-      sender: 'user' 
-    };
-    setChatMessages(prev => [...prev, userMessage]);
-
-    const botResponse = { 
-      id: chatMessages.length + 2, 
-      text: simulateBotResponse(newMessage), 
-      sender: 'bot' 
-    };
+    alert(`Enquiry Submitted!\nName: ${enquiryName}\nEmail: ${enquiryEmail}\nMessage: ${enquiryMessage}`);
     
-    setNewMessage('');
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, botResponse]);
-    }, 500);
+    // Reset form
+    setEnquiryName("");
+    setEnquiryEmail("");
+    setEnquiryMessage("");
   };
-
-  const simulateBotResponse = (userMessage) => {
-    const lowercaseMessage = userMessage.toLowerCase();
-    if (lowercaseMessage.includes('property')) {
-      return "I can help you find the perfect property. What type of property are you interested in?";
-    }
-    if (lowercaseMessage.includes('price') || lowercaseMessage.includes('cost')) {
-      return "Our current market trends show varying prices across different locations. Would you like to see our price trends?";
-    }
-    if (lowercaseMessage.includes('location')) {
-      return "We have properties in Downtown, Suburban, and Waterfront areas. Which area are you most interested in?";
-    }
-    return "Interesting! I'm always ready to help you with real estate queries.";
-  };
-
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
 
   return (
     <motion.div 
@@ -169,7 +129,9 @@ const RealEstateLandingPage = () => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6 }}
-              
+              src="/api/placeholder/600/400" 
+              alt="Mumbai Skyline" 
+              className="rounded-2xl shadow-2xl border-4 border-white/20"
             />
           </motion.div>
         </div>
