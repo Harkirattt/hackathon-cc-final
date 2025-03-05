@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2, RefreshCw, BookOpen, ChevronDown, Download } from "lucide-react";
+import { Play, Pause, Mic, Volume2, Square, X, MessageCircle, Globe, UserCircle2, RefreshCw, BookOpen, ChevronDown, Download, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast, Toaster } from "sonner";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
