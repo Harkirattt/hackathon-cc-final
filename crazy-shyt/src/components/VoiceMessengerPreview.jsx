@@ -89,9 +89,20 @@ const VoiceMessengerWithSockets = () => {
 
   const generateUniqueId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  // async function downloadImage(imageUrl) {
+  //   // Fetching the image from the URL
+  //   const response = await fetch(imageUrl);
+  //   // Reading the response as a buffer
+  //   const buffer = await response.buffer();
+  //   // Writing the buffer to a file named 'image.png'
+  //   fs.writeFileSync('image.png', buffer);
+  //   // Logging completion message
+  //   console.log('Download Completed');
+  // }
+
   async function fetchPollutionsImage(prompt) {
     try {
-      const response = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`);
+      const response = await fetch(`https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=512&height=512&seed=42&model=flux`);
       if (!response.ok) {
         throw new Error('Image generation failed');
       }
