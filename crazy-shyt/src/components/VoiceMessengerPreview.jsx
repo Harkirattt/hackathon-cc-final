@@ -277,6 +277,8 @@ const generatePDFReport = async (messages, conversationContext) => {
     - Key topics discussed
     - Significant keywords
     - Insights and potential next steps
+
+    NOTE: Don't Make Text Bold
     
     Conversation Context:
     Topics: ${conversationContext.topics.join(', ')}
