@@ -14,7 +14,7 @@ export async function getGeminiResponse(apiKey, prompt) {
       throw new Error('API key is required');
   }
   
-  const genAI = new GoogleGenerativeAI('AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew');
+  const genAI = new GoogleGenerativeAI('AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA');
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   
   try {
@@ -142,7 +142,7 @@ const VoiceMessengerWithSockets = () => {
     }
   
     // Improved API key retrieval
-    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew';
+    const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA';
     
     if (!API_KEY) {
       console.error("No Gemini API key found. Please check your environment variables.");
@@ -220,7 +220,7 @@ const VoiceMessengerWithSockets = () => {
 
     try {
       const API_KEY = process.env.GEMINI_API_KEY
-      const response = await getGeminiResponse('AIzaSyB3DkLb8K2R3eA8Ewv4cE8G3oE4X3eA8Ew',
+      const response = await getGeminiResponse('AIzaSyDgtKgA6PXtTCHfUhcbtS8ic4L7ERlI_tA',
        `Translate the following text into the language corresponding to the code ${targetLanguage}. Ensure that the translation maintains the original meaning, tone, and context. Provide only the translated text without any additional explanation:
 
 Original Text: "${originalText}"`
